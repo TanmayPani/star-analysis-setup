@@ -1,3 +1,5 @@
+#define StMyAnalysisMaker_cxx
+
 #include "StMyAnalysisMaker.h"
 
 //ROOT includes
@@ -16,7 +18,7 @@
 
 //MyAnalysisMaker includes
 #include "StEmcPosition2.h"
-#include "StEventTreeStruct.h"
+#include "StRoot/TStarEventClass/TStarEvent.h"
 
 ClassImp(StMyAnalysisMaker);
 
@@ -42,7 +44,7 @@ Int_t StMyAnalysisMaker::Init(){
         grefmultCorrUtil->readScaleForWeight("StRoot/StRefMultCorr/macros/weight_grefmult_vpd30_vpd5_Run14_P18ih_set1.txt");
     }
 
-    SetUpBadRuns(); //Probably deprecated, might add this into StRefMultCorr
+    if(!doRunbyRun)SetUpBadRuns(); //Probably deprecated, might add this into StRefMultCorr
 
     SetUpBadTowers();//There may be a better way
     SetUpDeadTowers();//There may be a better way
@@ -56,7 +58,7 @@ Int_t StMyAnalysisMaker::Init(){
     
     EmcPosition = new StEmcPosition2();
 
-    _Event = new MyStEvent();
+    _Event = new TStarEvent();
 
     BookTree();
 
@@ -100,99 +102,63 @@ Int_t StMyAnalysisMaker::Make(){
     }
 
     RunID = picoEvent->runId();
-    EventID = picoEvent->eventId();
 
-    //Reject bad runs here...,
-    if(badRuns.count(RunID)>0)return kStOK;
+    //Reject bad runs here..., if doing run by run jobs, reject bad runs while submitting jobs
+    if(!doRunbyRun && badRuns.count(RunID)>0)return kStOK;
 
+    _Event->SetIdNumbers(RunID, picoEvent->eventId());
     pVtx = picoEvent->primaryVertex();
-    double pVtx_Z = pVtx.z();
+    _Event->SetPrimaryVertex(pVtx);
     //primary Z vertex cut...
-    if((pVtx_Z < ZVtx_Min)||(pVtx_Z > ZVtx_Max)) return kStOK;
-
-    int gRefMult = picoEvent->grefMult();
-    int RefMult = picoEvent->refMult();
-    double BBCxx = picoEvent->BBCx();
-    double ZDCxx = picoEvent->ZDCx();
+    if(abs(_Event->Vz()) > AbsZVtx_Max) return kStOK;
 
     //Min bias trigger related event stuff...
     EventTriggers = picoEvent->triggerIds();
-    bool IsMB = IsEventMB(MBTriggers::kVPDMB);
+    _Event->SetHT1Status(IsEventHT(HTTriggers::kHT1));
+    _Event->SetHT2Status(IsEventHT(HTTriggers::kHT2));
+    _Event->SetHT3Status(IsEventHT(HTTriggers::kHT3));
 
-    double RefMultCorr = RefMult;
-    bool IsMB5 = false;
-    bool IsMB30 = false;
-    double Peripheral_ReWeight = 1;
-    double MB5toMB30_ReWeight = 0;
-    if(!doppAnalysis){ 
-        IsMB5  = IsEventMB(MBTriggers::kVPDMB5); 
-        IsMB30 = IsEventMB(MBTriggers::kVPDMB30); 
-        //Centrality related stuff...
-        grefmultCorr->init(RunID);
-        grefmultCorr->initEvent(gRefMult, pVtx_Z, ZDCxx);
-        RefMultCorr = grefmultCorr->getRefMultCorr(gRefMult, pVtx_Z, ZDCxx, 2);
-        centbin9 = grefmultCorr->getCentralityBin9();
-        centbin16 = grefmultCorr->getCentralityBin16();
-        ref9 = 8-centbin9;
-        ref16 = 15-centbin16; 
-        Peripheral_ReWeight = grefmultCorr->getWeight();
+    if(doHTEventsOnly && !(_Event->IsHT()))return kStOK;
 
-        grefmultCorrUtil->init(RunID);
-        grefmultCorrUtil->initEvent(gRefMult, pVtx_Z, ZDCxx); 
-        MB5toMB30_ReWeight = (IsMB5 && !IsMB30) ? grefmultCorrUtil->getWeight() : 1.0;
+    _Event->SetMBStatus(IsEventMB(MBTriggers::kVPDMB)); 
+    _Event->SetMB5Status(IsEventMB(MBTriggers::kVPDMB5)); 
+    _Event->SetMB30Status(IsEventMB(MBTriggers::kVPDMB30));
 
-        if(centbin16 < 0) return kStOK;
+    if(doMBEventsOnly && !(_Event->IsMB()))return kStOK;
+
+    _Event->SetRefMults(picoEvent->grefMult(), picoEvent->refMult()); 
+    _Event->SetBBCCoincidence(picoEvent->BBCx());
+    _Event->SetZDCCoincidence(picoEvent->ZDCx());
+
+    centbin16 = _Event->SetCentralityDetails(grefmultCorr);
+    if(centbin16 < 0) return kStOK;
+    if(doCentSelection){
+        double cent = _Event->Centrality(); 
+        if((cent < CentralityMin) || (cent > CentralityMax)){
+            return kStOK;
+        }
     }
+    ref16 = 15-centbin16; 
 
-    bool IsEventMB = false;
-    if(IsMB)IsEventMB = true;
-    if(IsMB5)IsEventMB = true;
-    if(IsMB30)IsEventMB = true;
-    
-    _Event->RunID = RunID;
-    _Event->EventID = EventID;
-    _Event->gRefMult = gRefMult;
-    _Event->RefMult = RefMult;
-    _Event->RefMultCorr = RefMultCorr;
-    _Event->Centrality = 5.0*ref16;
-    _Event->Peripheral_ReWeight = Peripheral_ReWeight;
-    _Event->MB5toMB30_ReWeight = MB5toMB30_ReWeight;
-    _Event->IsMB = IsMB;
-    _Event->IsMB5 = IsMB5;
-    _Event->IsMB30 = IsMB30;
-    _Event->pVtx_Z = pVtx_Z;
-    _Event->pVtx_r = pVtx.Perp();
-    _Event->VPD_Vz = picoEvent->vzVpd();
-    _Event->ZDCxx = ZDCxx;
-    _Event->BBCxx = BBCxx;
+    _Event->SetMB5toMB30Reweight(grefmultCorrUtil);
+    _Event->SetVPDVz(picoEvent->vzVpd());
 
-    _Event->ClearVectors();
-
-    RunOverEmcTriggers(); //Runs over all emc i.e., High tower (and Jet patch for pp) triggers...
-    bool isHT = false;
-    if(_Event->IsHT0)isHT = true;
-    if(_Event->IsHT1)isHT = true;
-    if(_Event->IsHT2)isHT = true;
-    if(_Event->IsHT3)isHT = true;
-
-    if(!IsEventMB && !isHT)return kStOK; //Require atleast one trigger to be fired...
-
-    if(isHT) cout<<"HT!"<<endl;
-    //if((!_Event->IsHT0 && !_Event->IsHT1)&&(!_Event->IsHT2 && !_Event->IsHT3));
+    RunOverEmcTriggers(); //Runs over all emc i.e., High tower (and Jet patch for pp) triggers... 
+    _Event->ClearTrackArray();
     RunOverTracks(); //Runs over all tracks
+    _Event->ClearTowerArray();
     RunOverTowers(); //Runs over all towers
 
     tree->Fill();
 
     return kStOk;
-
 }
 
 void StMyAnalysisMaker::BookTree(){
     if(OutputFileName == ""){
         cout<<"Trees are not being written to any file!"<<endl;
         tree = new TTree("Event_Info", "Tree with event Info");
-        tree->Branch("Event", "MyStEvent", &(_Event)); 
+        tree->Branch("Events", "TStarEvent", &(_Event)); 
     }else{
         fout = new TFile(OutputFileName.c_str(), "UPDATE");
         fout->cd();
@@ -201,32 +167,35 @@ void StMyAnalysisMaker::BookTree(){
         cout<<"Writing tree to: "<<OutputFileName<<endl;
         tree = new TTree("Event_Info", "Tree with event Info");
         tree->SetDirectory(gDirectory);
-        tree->Branch("Event", &(_Event), 32000, 99); 
+        tree->Branch("Events", &(_Event), 32000, 99); 
         cout<<"Events tree directory set"<<endl;
     }
 }
 
 void StMyAnalysisMaker::RunOverEmcTriggers(){
-    _Event->NTriggers = picoDst->numberOfEmcTriggers();
-
-    //empty and initialize HighTowerStatusArrays for all 4800 towers 
+    _Event->SetNumberOfEmcTriggers(picoDst->numberOfEmcTriggers());
+    //empty and initialize HighTowerStatus arrays for all 4800 towers 
     HighTowerStatus.assign(4800, {false, false, false, false});
 
     for(int itrig = 0; itrig < picoDst->numberOfEmcTriggers(); itrig++){
         StPicoEmcTrigger *trigger = static_cast<StPicoEmcTrigger*>(picoDst->emcTrigger(itrig));
         int itow = trigger->id() - 1;
-        if(trigger->isHT0())     { HighTowerStatus[itow][0] = true; _Event->IsHT0 = true; continue;}
-        else if(trigger->isHT1()){ HighTowerStatus[itow][1] = true; _Event->IsHT1 = true; continue;}
-        else if(trigger->isHT2()){ HighTowerStatus[itow][2] = true; _Event->IsHT2 = true; continue;}
-        else if(trigger->isHT3()){ HighTowerStatus[itow][3] = true; _Event->IsHT3 = true; continue;}
+        if(trigger->isHT0())      {HighTowerStatus[itow][0] = true;}
+        else if(trigger->isHT1()) {HighTowerStatus[itow][1] = true;}
+        else if(trigger->isHT2()) {HighTowerStatus[itow][2] = true;}
+        else if(trigger->isHT3()) {HighTowerStatus[itow][3] = true;}
     }
 }
 
 void StMyAnalysisMaker::RunOverTracks(){
-    _Event->NTracks = picoDst->numberOfTracks();
-    //cout<<"# primary tracks in event: "<<_Event->NTracks<<" "<<picoEvent->numberOfPrimaryTracks()<<endl;
+    _Event->SetNumberOfGlobalTracks(picoDst->numberOfTracks());
+
     TracksMatchedToTower.assign(4800, {}); 
     TrackPtMax = 0;
+
+    if(_Event->Tracks->GetEntriesFast() > 0){
+        cout<<"Track array not cleared from previous event!"<<endl;
+    }
 
     for(int itrk = 0; itrk < picoDst->numberOfTracks(); itrk++){ //begin Track Loop...
         StPicoTrack *trk = static_cast<StPicoTrack*>(picoDst->track(itrk));
@@ -237,12 +206,15 @@ void StMyAnalysisMaker::RunOverTracks(){
         if(double(trk->nHitsFit()/trk->nHitsMax()) < TrackNHitsRatioMin) continue;
 
         TVector3 trkMom = trk->pMom();
+        double pt = trkMom.Pt();
+        double eta = trkMom.Eta();
 
-        if(trkMom.Pt() < TrackPtMin) continue; 
-        //if(_Tracks[itrk].Pt > TrackPtMax) continue;
-        if((trkMom.Eta() < TrackEtaMin) || (trkMom.Eta() > TrackEtaMax)) continue;
+        if(pt < TrackPtMin) continue; 
+        if((eta < TrackEtaMin) || (eta > TrackEtaMax)) continue;
 
-        double trackingEff = GetTrackingEfficiency(trkMom, ref16, _Event->ZDCxx, EfficiencyFile);
+        if(pt > TrackPtMax) TrackPtMax = pt; 
+
+        double trackingEff = GetTrackingEfficiency(pt, eta, ref16, _Event->ZDC_Coincidence(), EfficiencyFile);
 
         int MatchedTowerIndex = trk->bemcTowerIndex();
         if(MatchedTowerIndex >= 0){
@@ -250,12 +222,14 @@ void StMyAnalysisMaker::RunOverTracks(){
             //cout<<"Track: "<<itrk<<" Matched Tower: "<<MatchedTowerIndex<<endl;
         }
 
-        MyStTrack _track(itrk, trkMom, trk->charge());
-        _track.trackingEff = trackingEff;
-        _track.MatchedTowerIndex = MatchedTowerIndex;
-
-        _Event->AddTrack(_track);
-        if(_track.Pt > TrackPtMax) TrackPtMax = _track.Pt; 
+        TStarTrack *_track = _Event->AddTrack();
+        _track->SetIndex(itrk);
+        _track->SetCharge(trk->charge());
+        _track->SetPxPyPz(trkMom);
+        _track->SetTrackingEfficiency(trackingEff);
+        _track->SetMatchedTower(MatchedTowerIndex); 
+        _track->DoTrackPid(trk->nSigmaPion(), trk->nSigmaKaon(), 
+                           trk->nSigmaProton(), trk->nSigmaElectron());       
 
         //if(!doJetAnalysis) continue;
         //if(_track.Pt < JetConstituentMinPt)continue;
@@ -263,14 +237,17 @@ void StMyAnalysisMaker::RunOverTracks(){
         //double E = sqrt(trkMom.Mag2()+pi0mass*pi0mass);
         //TracksForJetClustering[itrk] = make_pair(new TLorentzVector(trkMom, E), _track.Charge);   
    }
-   _Event->MaxTrackPt = TrackPtMax;
-
+   _Event->SetMaxTrackPt(TrackPtMax);
 }
 
 void StMyAnalysisMaker::RunOverTowers(){    
-    _Event->NTowers = picoDst->numberOfBTowHits();
+    _Event->SetNumberOfTowers(picoDst->numberOfBTowHits());
 
     TowerEtMax = 0;
+
+    if(_Event->Towers->GetEntriesFast() > 0){
+        cout<<"Tower array not cleared from previous event!"<<endl;
+    }
 
     for(int itow = 0; itow < picoDst->numberOfBTowHits(); itow++){
         StPicoBTowHit *tower = static_cast<StPicoBTowHit*>(picoDst->btowHit(itow));
@@ -308,16 +285,18 @@ void StMyAnalysisMaker::RunOverTowers(){
             //cout<<EnergyCorr<<endl;
         }
 
-        MyStTower _tower(itow, tower->adc(), tower->energy(), towPos);
-        _tower.SetHighTowerStatus(HighTowerStatus[itow]);
-        _tower.NMatchedTracks = TracksMatchedToTower[itow].size();
-        _tower.EnergyCorr = EnergyCorr;
-
-        _Event->AddTower(_tower);
-
         if(EnergyCorr < TowerEnergyMin) continue;
         double towEt = EnergyCorr/cosh(towPos.Eta());
         if(towEt < TowerEnergyMin) continue;
+
+        TStarTower *_tower = _Event->AddTower();
+        _tower->SetIndex(itow);
+        _tower->SetADC(tower->adc());
+        _tower->SetE(EnergyCorr);
+        _tower->SetRawE(tower->energy());
+        _tower->SetPosXYZ(towPos);
+        _tower->SetHighTowerStatus(HighTowerStatus[itow]);
+        _tower->SetNMatchedTracks(TracksMatchedToTower[itow].size());
 
         if(towEt > TowerEtMax)TowerEtMax = towEt;
 
@@ -331,7 +310,7 @@ void StMyAnalysisMaker::RunOverTowers(){
         //TowersForJetClustering[itow] = new TLorentzVector(towPos, EnergyCorr);
     }
 
-    _Event->MaxTowerEt = TowerEtMax;
+    _Event->SetMaxTowerEt(TowerEtMax);
 
 }
 
@@ -352,7 +331,7 @@ bool StMyAnalysisMaker::IsEventMB(MBTriggers type){
         case RunFlags::kRun14 :
             switch(type){
                 case MBTriggers::kVPDMB : TriggerIds = {450014};break; //Why not 450001 ?
-                case MBTriggers::kVPDMB_extra : TriggerIds = {450001, 450014};break;
+                case MBTriggers::kVPDMB_extra : TriggerIds = {440001, 450014};break;
                 case MBTriggers::kVPDMB5 : TriggerIds = {450005, 450008, 450009, 450014, 450015, 450018, 450024, 450025, 450050, 450060};break;
                 case MBTriggers::kVPDMB30 : TriggerIds = {450010, 450020};break;
                 case MBTriggers::kVPDMB30_extra : TriggerIds = {450010, 450020, 450201, 450202, 450211, 450212};break;
@@ -363,11 +342,30 @@ bool StMyAnalysisMaker::IsEventMB(MBTriggers type){
     return find_first_of(EventTriggers.begin(), EventTriggers.end(), TriggerIds.begin(), TriggerIds.end()) != EventTriggers.end();
 }
 
-double StMyAnalysisMaker::GetTrackingEfficiency(TVector3& tMom, int cbin, double zdcx, TFile *infile){
-    double x = tMom.Pt();
-    double y = tMom.Eta();
+bool StMyAnalysisMaker::IsEventHT(HTTriggers type){
+   vector<unsigned int> TriggerIds;
+    switch(Run_Flag){
+        case RunFlags::kRun12 : 
+            switch(type){
+                case HTTriggers::kHT1 : TriggerIds = {370511, 370546};break; //Why not 370001 ?
+                case HTTriggers::kHT2 : TriggerIds = {370521, 370522, 370531, 370980};break; //Why not 370001 ?
+                case HTTriggers::kHT3 : TriggerIds = {380206, 380216};break; //Why not 370001 ?
+                default : TriggerIds = {370521, 370522, 370531, 370980}; 
+            }break;
+        case RunFlags::kRun14 :
+            switch(type){
+                case HTTriggers::kHT1 : TriggerIds = {450201, 450211, 460201};break; //Why not 460001 ?
+                case HTTriggers::kHT2 : TriggerIds = {450202, 450212, 460202, 460212};break;
+                case HTTriggers::kHT3 : TriggerIds = {450203, 450213, 460203};break;
+                default : TriggerIds = {450202, 450212, 460202, 460212}; 
+            }break;   
+    }
 
-    double effBinContent = -99; // value extracted from histogram
+    return find_first_of(EventTriggers.begin(), EventTriggers.end(), TriggerIds.begin(), TriggerIds.end()) != EventTriggers.end(); 
+}
+
+double StMyAnalysisMaker::GetTrackingEfficiency(double x, double y, int cbin, double zdcx, TFile *infile){
+    double effBinContent = -99; // value to be extracted from histogram
     const char *species =  "pion"; // FIXME
     int lumiBin = floor(zdcx/10000);
 

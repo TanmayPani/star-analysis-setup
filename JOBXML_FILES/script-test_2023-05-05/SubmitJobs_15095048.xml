@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+<job  name="2023-05-05_15095048" maxFilesPerProcess="10" fileListSyntax="xrootd" simulateSubmission="false" >
+
+	<input URL="catalog:star.bnl.gov?production=P18ih,library=SL20d,trgsetupname=AuAu_200_production_mid_2014,filetype=daq_reco_picoDst,sname2=st_physics,runnumber=15095048,storage!=hpss" nFiles="all" />
+
+	<stdout URL="file:/gpfs01/star/pwg/tpani/output/PicosToTree/script-test/15095048/log/$JOBID.log" />
+	<stderr URL="file:/gpfs01/star/pwg/tpani/output/PicosToTree/script-test/15095048/log/$JOBID.err" />
+	<output fromScratch="EventTree_15095048_$JOBINDEX.root" toURL="file:/gpfs01/star/pwg/tpani/output/PicosToTree/script-test/15095048/out/EventTrees/" /> 
+	<Generator> 
+		<Location>/gpfs01/star/pwg/tpani/output/PicosToTree/script-test/15095048/gen/</Location> 
+	</Generator>
+
+    <SandBox>
+        <Package>
+            <File>file:./readPicoDstAnalysisMaker.C</File>
+            <File>file:./StRoot/</File>
+            <File>file:./.sl73_gcc485/</File>
+        </Package>
+    </SandBox>
+
+	<command>
+		ln -s /star/u/tpani/FastJet/fastjet-install/include/fastjet
+		ln -s /star/u/tpani/FastJet/fastjet-install/include/siscone
+
+		starver new
+		setenv FASTJET /star/u/tpani/FastJet/fastjet-install
+
+	    root -b -q -l readPicoDstAnalysisMaker.C\(\"$FILELIST\",\"15095048_$JOBINDEX.root\",1000000000\)
+	   
+	    unlink fastjet
+	    unlink siscone   
+	</command>
+
+</job>
+

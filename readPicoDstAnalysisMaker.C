@@ -37,25 +37,30 @@ void LoadLibs(){
   gSystem->Load("libStPicoDstMaker");
 
   // my libraries
-  gSystem->Load("StRefMultCorr");
-  gSystem->Load("StMyAnalysisMaker");
-  gSystem->Load("StMyJetMaker");
+  gSystem->Load("libStRefMultCorr");
+  gSystem->Load("libTStarEventClass");
+  gSystem->Load("libStMyAnalysisMaker");
+  gSystem->Load("libStMyJetMaker");
 
   gSystem->ListLibraries();
 } 
 
 
-void readPicoDstAnalysisMaker(string inputFile="testing_Temp.list", string outputFile="test.root", int nEvents = 10000){
+void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.list", string outputFile="test.root", int nEvents = 10000){
       // Load necessary libraries and macros
       LoadLibs();
-      // =============================================================================== //
-      // open and close output .root file (so it exist and can be updated by Analysis Tasks)
+      
+      enum RunFlags{kRun12 = 12, kRun14 = 14};
+      enum HadronicCorrectionType{kNone_ = 0, kHighestMatchedTrackE = 1, kFull = 2};
+
+      //RunFlags run_flag = RunFlags::kRun14;
+      //HadronicCorrectionType hcorrtype = HadronicCorrectionType::kFull;
 
       bool useEmcPidTraits = false;
       bool doEmbedding = false;
       bool makeJetTree = false;
 
-      // create chain
+      // create chain to take in makers
       StChain* chain = new StChain();
       // create the picoMaker maker:  (PicoIoMode, inputFile, name="picoDst")
       // - Write PicoDst's: PicoIoMode::IoWrite -> StPicoDstMaker::IoWrite
@@ -77,13 +82,35 @@ void readPicoDstAnalysisMaker(string inputFile="testing_Temp.list", string outpu
       TFile *fout = new TFile(eventOutputFile.c_str(), "RECREATE");
       fout->Close();
 
-      StMyAnalysisMaker *analysis = new StMyAnalysisMaker("StMyAnalysisMaker", eventOutputFile);
+      StMyAnalysisMaker *anaMaker = new StMyAnalysisMaker("StMyAnalysisMaker", eventOutputFile);
+      //anaMaker->SetRunFlag(RunFlags::kRun14);
+      anaMaker->SetdoppAnalysis(false);
+      anaMaker->SetdoRunbyRun(true);
 
-      string jetOutputFile = "JetTree_"+outputFile;
-      TFile *fjetout = new TFile(jetOutputFile.c_str(), "RECREATE");
-      fjetout->Close();
+      anaMaker->SetdoHTEventsOnly(true);
+      anaMaker->SetdoMBEventsOnly(false);
+      anaMaker->SetdoCentralitySelection(false);
+      anaMaker->SetAbsZVtxMax(40);
 
+      anaMaker->SetTrackPtMin(0.2);
+      anaMaker->SetTrackEtaMin(-1.0);
+      anaMaker->SetTrackEtaMax(1.0);
+      anaMaker->SetTrackDCAMax(3.0);
+      anaMaker->SetTrackNHitsFitMin(15);
+      anaMaker->SetTrackNHitsRatioMin(0.52);
+
+      anaMaker->SetTowerEtaMin(-1.0);
+      anaMaker->SetTowerEtaMax(1.0);
+      anaMaker->SetTowerEnergyMin(0.2);
+      //anaMaker->SetTowerHadronicCorrType(HadronicCorrectionType::kFull);
+
+      TFile *fjetout = NULL;
+  
       if(makeJetTree){
+        string jetOutputFile = "JetTree_"+outputFile;
+        fjetout = new TFile(jetOutputFile.c_str(), "RECREATE");
+        fjetout->Close();
+
         StMyJetMaker *jetMaker = new StMyJetMaker("StMyJetMaker", "StMyAnalysisMaker", jetOutputFile);
       }
        // initialize chain
@@ -114,7 +141,7 @@ void readPicoDstAnalysisMaker(string inputFile="testing_Temp.list", string outpu
 
   // close output file if open
   if(fout->IsOpen())   fout->Close();
-  if(fjetout->IsOpen())   fjetout->Close();
+  if(fjetout != NULL && fjetout->IsOpen())   fjetout->Close();
 
   //StMemStat::PrintMem("load StChain");
 }

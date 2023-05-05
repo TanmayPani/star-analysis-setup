@@ -3,7 +3,7 @@
 #include "FJ_includes.h"
 //My StRoot includes
 #include "StRoot/StMyAnalysisMaker/StMyAnalysisMaker.h"
-#include "StRoot/StMyAnalysisMaker/StEventTreeStruct.h"
+#include "StRoot/TStarEventClass/TStarEvent.h"
 #include "StJetTreeStruct.h"
 
 using namespace fastjet;
@@ -43,28 +43,33 @@ Int_t StMyJetMaker::Make(){
 
     anaMaker = static_cast<StMyAnalysisMaker*>(GetMaker(Analysis.c_str()));
    
-    myEvent = static_cast<MyStEvent*>(anaMaker->GetEvent()); 
+    myEvent = static_cast<TStarEvent*>(anaMaker->GetEvent()); 
 
     //if(!myEvent->IsHT2)return kStOK;
 
-    _JetEvent->RunID = myEvent->RunID;
-    _JetEvent->EventID = myEvent->EventID;
+    _JetEvent->RunID = myEvent->RunNumber();
+    _JetEvent->EventID = myEvent->EventNumber();
 
-    vector<MyStTrack> myTracks = myEvent->Tracks;
+    vector<PseudoJet> *jet_constituents;
 
-    vector<PseudoJet> jet_constituents;
+    _Tracks = static_cast<TClonesArray*>(myEvent->GetTracks());
 
-    for(int itrk = 0; itrk < myTracks.size(); itrk++){
-       if(myTracks[itrk].Pt < JetConstituentMinPt)continue;  
-       else InputForClustering(jet_constituents, itrk, myTracks[itrk].Charge, myTracks[itrk].Pt, myTracks[itrk].Eta, myTracks[itrk].Phi, pi0mass);
+    for(int itrk = 0; itrk < _Tracks->GetEntriesFast(); itrk++){
+        TStarTrack *_track = static_cast<TStarTrack*>(_Tracks->At(itrk)); 
+        if(_track->Pt() < JetConstituentMinPt)continue;  
+        PseudoJet constit(_track->Px(), _track->Py(), _track->Pz(), _track->Pi0E());
+        constit.set_user_info(new UserInfo(_track->Index(), _track->Charge()));
+        jet_constituents->push_back(move(constit));
     }
 
-    vector<MyStTower> myTowers = myEvent->Towers;
+    _Towers = static_cast<TClonesArray*>(myEvent->GetTowers());
 
-    for(int itow = 0; itow < myTowers.size(); itow++){
-        double Et = myTowers[itow].EnergyCorr/cosh(myTowers[itow].Eta);
-        if(Et < JetConstituentMinPt)continue;
-        else InputForClustering(jet_constituents, itow, myTowers[itow].EnergyCorr, myTowers[itow].Eta, myTowers[itow].Phi, pi0mass); 
+    for(int itow = 0; itow < _Towers->GetEntriesFast(); itow++){
+        TStarTower *_tower = static_cast<TStarTower*>(_Towers->At(itow));
+        if(_tower->Pt() < JetConstituentMinPt)continue;
+        PseudoJet constit(_tower->Px(), _tower->Py(), _tower->Pz(), _tower->E());
+        constit.set_user_info(new UserInfo(_tower->Index(), 0));
+        jet_constituents->push_back(move(constit));
     } 
    
     JetDefinition *jet_def = nullptr;
@@ -86,12 +91,12 @@ Int_t StMyJetMaker::Make(){
     if(doBackgroundCalc){
         area_spec = new GhostedAreaSpec(MaxRap);
         area_def =  new AreaDefinition(active_area_explicit_ghosts, *area_spec);
-        CS_Area = new ClusterSequenceArea(jet_constituents, *jet_def, *area_def);
+        CS_Area = new ClusterSequenceArea(*jet_constituents, *jet_def, *area_def);
         jets = JetCuts(no_ghost(CS_Area->inclusive_jets()));
 
         bkg_jet_def = new JetDefinition(kt_algorithm, R, BIpt2_scheme, Best);
         mBGE = new JetMedianBackgroundEstimator(bkg_selector, *bkg_jet_def, *area_def);
-        mBGE->set_particles(jet_constituents);
+        mBGE->set_particles(*jet_constituents);
         _JetEvent->EventRho = mBGE->rho();
         _JetEvent->EventSigma = mBGE->sigma();
         //if(doBkgSubtraction){
@@ -99,7 +104,7 @@ Int_t StMyJetMaker::Make(){
         //    subtractor->set_common_bge_for_rho_and_rhom(true);
         //}
     }else{
-        CS = new ClusterSequence(jet_constituents, *jet_def);
+        CS = new ClusterSequence(*jet_constituents, *jet_def);
         jets = JetCuts(CS->inclusive_jets());
     }
 
@@ -128,7 +133,6 @@ Int_t StMyJetMaker::Make(){
         _jet.NConstituents = constits.size();
 
         double neutralPt = 0;
-        double leadpt = 0, subleadpt = 0;
         for(int ic = 0; ic < constits.size(); ic++){
             if(doBackgroundCalc && constits[ic].is_pure_ghost())continue;
 
@@ -173,28 +177,3 @@ void StMyJetMaker::BookTree(){
         cout<<"Jets Tree directory set"<<endl;
     }
 }
-
-void StMyJetMaker::InputForClustering(vector<PseudoJet>& pvec, int i, short ch, double pt, double eta, double phi, double M){
-    double p = pt * cosh(eta);
-    double E = sqrt(p*p + M*M);
-
-    PseudoJet constit(pt*cos(phi), pt*sin(phi), pt*sinh(eta), E);
-    constit.set_user_info(new UserInfo(i, ch));
-    pvec.push_back(constit);
-}
-
-void StMyJetMaker::InputForClustering(vector<PseudoJet>& pvec, int i, double E, double eta, double phi, double M){
-    double p = sqrt(E*E - M*M);
-    double pt = p/cosh(eta);
-    PseudoJet constit(pt*cos(phi), pt*sin(phi), pt*sinh(eta), E);
-    constit.set_user_info(new UserInfo(i, 0));
-    pvec.push_back(constit);
-}
-
-
-
-
-
-
-
-

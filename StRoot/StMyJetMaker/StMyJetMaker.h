@@ -6,10 +6,9 @@
 
 //C++ includes
 #include <vector>
-#include <map>
 
 class StMyAnalysisMaker;
-class MyStEvent;
+class TStarEvent;
 class StJetEvent;
 
 namespace fastjet{
@@ -33,10 +32,6 @@ class StMyJetMaker : public StMaker{
 
         void BookTree();
 
-        // inline void InputForClustering(int i, short ch, float px, float py, float pz, float E);
-        void InputForClustering(vector<fastjet::PseudoJet>& p, int i, short ch, double pt, double eta, double phi, double M);
-        void InputForClustering(vector<fastjet::PseudoJet>& p, int i, double E, double eta, double phi, double M); 
-
         //Boolean flags...
         void SetDoBackgroundCalc(bool b){doBackgroundCalc = b;}
         void SetDoBkgSubtraction(bool b){doBkgSubtraction = b;}
@@ -51,7 +46,7 @@ class StMyJetMaker : public StMaker{
         private:
             double pi0mass = 0.13957;
             StMyAnalysisMaker *anaMaker = nullptr;
-            MyStEvent *myEvent = nullptr;
+            TStarEvent *myEvent = nullptr;
             string Analysis = "";
             string OutputFileName = "";
             float R = 0.4;
@@ -73,6 +68,8 @@ class StMyJetMaker : public StMaker{
         private:
             TFile *fout = nullptr;
             TTree *tree = nullptr; 
+            TClonesArray *_Tracks = nullptr;
+            TClonesArray *_Towers = nullptr;
         
         ClassDef(StMyJetMaker, 1)
 

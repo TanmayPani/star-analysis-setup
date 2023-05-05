@@ -22,7 +22,7 @@ class StPicoDstMaker;
 class StPicoDst;
 class StPicoEvent;
 class StPicoTrack;
-class MyStEvent;
+class TStarEvent;
 //class TVector3;
 
 class StMyAnalysisMaker : public StMaker {
@@ -30,8 +30,8 @@ public:
     StMyAnalysisMaker(string name, string output);
     virtual ~StMyAnalysisMaker();
 
-    enum HadronicCorrectionType{kNone, kHighestMatchedTrackE, kFull};
-    enum RunFlags{kRun12, kRun14};
+    enum HadronicCorrectionType{kNone = 0, kHighestMatchedTrackE = 1, kFull = 2};
+    enum RunFlags{kRun12 = 12, kRun14 = 14};
     enum MBTriggers{kVPDMB, kVPDMB_extra, kVPDMB5, kVPDMB30, kVPDMB30_extra};
     enum HTTriggers{kHT0, kHT1, kHT2, kHT3};
 
@@ -42,10 +42,15 @@ public:
     virtual Int_t Finish();
 
     void SetRunFlag(RunFlags run){Run_Flag = run;}
-    void SetZVtxMin(float z){ZVtx_Min = z;}
-    void SetZVtxMax(float z){ZVtx_Max = z;}
+    void SetZVtxRange(double min, double max){ZVtx_Min = min; ZVtx_Max = max;}
+    void SetAbsZVtxMax(double z){AbsZVtx_Max = z;}
+    void SetCentralityRange(double min, double max){CentralityMin = min; CentralityMax = max;}
 
     void SetdoppAnalysis(bool b){doppAnalysis = b;}
+    void SetdoRunbyRun(bool b){doRunbyRun = b;}
+    void SetdoHTEventsOnly(bool b){doHTEventsOnly = b;}
+    void SetdoMBEventsOnly(bool b){doMBEventsOnly = b;}
+    void SetdoCentralitySelection(bool b){doCentSelection = b;}
 //    void SetdoJetAnalysis(bool b) {doJetAnalysis = b;}
 //    void SetdoFullJets(bool b){doFullJet = b;}
 
@@ -58,11 +63,13 @@ public:
     void SetTrackNHitsRatioMin(double m){TrackNHitsRatioMin = m;}
 
     void SetTowerEnergyMin(double m){TowerEnergyMin = m;}
+    void SetTowerEtaMin(double m) {TowerEtaMin = m;}
+    void SetTowerEtaMax(double m) {TowerEtaMax = m;}
     void SetTowerHadronicCorrType(HadronicCorrectionType t){TypeOfHadCorr = t;}
     void SetJetConstituentMinPt(bool pt){JetConstituentMinPt = pt;}
 
     //Output Methods...
-    MyStEvent* GetEvent(){return _Event;}
+    TStarEvent* GetEvent(){return _Event;}
 
 private:
     double pi0mass = 0.13957;
@@ -79,8 +86,8 @@ private:
 
     //To check event for triggers...
     bool IsEventMB(MBTriggers mbtype);
-    double GetTrackingEfficiency(TVector3& p, int centbin, double zdcx, TFile *infile);
-    //void IsEventHT(HTTriggerTypes httype);
+    bool IsEventHT(HTTriggers httype);
+    double GetTrackingEfficiency(double pt, double eta, int centbin, double zdcx, TFile *infile);
 
     //Utility functions to run over tracks and towers
     void RunOverEmcTriggers();
@@ -113,12 +120,21 @@ private:
 
     //Boolean flags to toggle functionalities
     bool doppAnalysis = false;
+    bool doRunbyRun = false;
+    bool doHTEventsOnly = false;
+    bool doMBEventsOnly = false;
+    bool doCentSelection = false;
 //    bool doJetAnalysis = false;
 //    bool doFullJet = false;
 
     //Event quality cuts
     float ZVtx_Min = -40.0;
     float ZVtx_Max = 40.0;
+    float AbsZVtx_Max = 40.0;
+
+    //Event analysis cuts
+    float CentralityMin = 0;
+    float CentralityMax = 10; 
 
     //Track quality cuts
     double TrackPtMin = 0.2;
@@ -159,7 +175,7 @@ protected:
 
     TVector3 pVtx;
 
-    MyStEvent *_Event = nullptr;
+    TStarEvent *_Event = nullptr;
  
     ClassDef(StMyAnalysisMaker, 2)
 };
