@@ -1,21 +1,26 @@
 #ifndef StMyJetMaker_h
 #define StMyJetMaker_h
 
+#include <memory>
+
 //STAR includes
 #include "StMaker.h"
 
-//C++ includes
-#include <vector>
-
 class StMyAnalysisMaker;
+class TClonesArray;
 class TStarEvent;
-class StJetEvent;
+class TStarJetEvent;
+class TFile;
 
 namespace fastjet{
     class PseudoJet;
-};
-
-using namespace std;
+    class JetDefinition;
+    class GhostedAreaSpec;
+    class AreaDefinition;
+    class ClusterSequence;
+    class ClusterSequenceArea;
+    class JetMedianBackgroundEstimator;
+}
 
 class StMyJetMaker : public StMaker{
     public:
@@ -33,8 +38,7 @@ class StMyJetMaker : public StMaker{
         void BookTree();
 
         //Boolean flags...
-        void SetDoBackgroundCalc(bool b){doBackgroundCalc = b;}
-        void SetDoBkgSubtraction(bool b){doBkgSubtraction = b;}
+        void SetDoMCJets(bool b){doMCJets = b;}
 
         //Kinematic cuts for jets, can add more as needed...
         void SetJetPtMin(double pt)     {JetPtMin = pt;}
@@ -43,36 +47,46 @@ class StMyJetMaker : public StMaker{
         void SetJetEtaMax(double eta)   {JetEtaMax = eta;}
         void SetJetAbsEtaMax(double eta){JetAbsEtaMax = eta;}
 
-        private:
-            double pi0mass = 0.13957;
-            StMyAnalysisMaker *anaMaker = nullptr;
-            TStarEvent *myEvent = nullptr;
-            string Analysis = "";
-            string OutputFileName = "";
-            float R = 0.4;
-            double MaxRap = 1.2;
-            bool doBackgroundCalc = true;
-            bool doBkgSubtraction = false;
+    private:
+        double pi0mass = 0.13957;
+        StMyAnalysisMaker *anaMaker = nullptr;
+        TStarEvent *myEvent = nullptr;
+        std::string Analysis = "";
+        std::string OutputFileName = "";
+        float R = 0.4;
+        double MaxRap = 1.2;
+        bool doMCJets = false;
+        bool doBkgSubtraction = false;
 
-            double JetConstituentMinPt = 2.0;
+        double JetConstituentMinPt = 2.0;
+        double JetPtMin = 10;
+        double JetPtMax = 80;
+        double JetEtaMin = -0.6;
+        double JetEtaMax = 0.6;
+        double JetAbsEtaMax = 0.6;
 
-            double JetPtMin = 10;
-            double JetPtMax = 80;
-            double JetEtaMin = -0.6;
-            double JetEtaMax = 0.6;
-            double JetAbsEtaMax = 0.6;
+        fastjet::JetDefinition *jet_def = nullptr;
+        fastjet::JetDefinition *bkg_jet_def = nullptr;
 
-        protected:
-            StJetEvent *_JetEvent = nullptr; //Final jets of the events are contained here
+        fastjet::GhostedAreaSpec *area_spec = nullptr;
+        fastjet::AreaDefinition *area_def = nullptr;
 
-        private:
-            TFile *fout = nullptr;
-            TTree *tree = nullptr; 
-            TClonesArray *_Tracks = nullptr;
-            TClonesArray *_Towers = nullptr;
+        fastjet::ClusterSequence *CS = nullptr;
+        fastjet::ClusterSequenceArea *CS_Area = nullptr;
+
+        fastjet::JetMedianBackgroundEstimator* mBGE = nullptr; 
+
+        TFile *fout = nullptr;
+        TTree *tree = nullptr; 
+        TClonesArray *_Tracks = nullptr;
+        TClonesArray *_Towers = nullptr;  
+
+        class StJetUserInfo;
+
+    protected:
+        TStarJetEvent *_JetEvent = nullptr; //Final jets of the events are contained here
         
-        ClassDef(StMyJetMaker, 1)
-
+    ClassDef(StMyJetMaker, 1)
 };
 //TODO : Methods for seamless transition between StPicoTrack and PseudoJet
 //Inspiration to be taken from Pythia8Plugins/FastJet3.h

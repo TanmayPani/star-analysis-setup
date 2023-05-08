@@ -3,7 +3,10 @@
 #include "StMyAnalysisMaker.h"
 
 //ROOT includes
+#include "TH1.h"
 #include "TH2.h"
+#include "TTree.h"
+#include "TFile.h"
 // centrality includes
 #include "StRoot/StRefMultCorr/CentralityMaker.h"
 #include "StRoot/StRefMultCorr/StRefMultCorr.h"
@@ -15,12 +18,15 @@
 #include "StRoot/StPicoEvent/StPicoEmcTrigger.h"
 #include "StRoot/StPicoEvent/StPicoBTowHit.h"
 #include "StRoot/StPicoEvent/StPicoBEmcPidTraits.h"
-
 //MyAnalysisMaker includes
 #include "StEmcPosition2.h"
 #include "StRoot/TStarEventClass/TStarEvent.h"
+#include "StRoot/TStarEventClass/TStarTrack.h"
+#include "StRoot/TStarEventClass/TStarTower.h"
 
 ClassImp(StMyAnalysisMaker);
+
+using namespace std;
 
 StMyAnalysisMaker::StMyAnalysisMaker(string name, string output):
 StMaker(name.c_str()){
@@ -34,6 +40,10 @@ StMaker(name.c_str()){
 StMyAnalysisMaker::~StMyAnalysisMaker(){
     if(EmcPosition) delete EmcPosition;
     if(EfficiencyFile) delete EfficiencyFile; 
+    if(!_Event->TestBit(kIsOnHeap))delete _Event;
+    if(hEventStats)delete hEventStats;
+    if(hTrackStats)delete hTrackStats;
+    if(hTowerStats)delete hTowerStats;
 }
 
 Int_t StMyAnalysisMaker::Init(){
@@ -48,6 +58,7 @@ Int_t StMyAnalysisMaker::Init(){
 
     SetUpBadTowers();//There may be a better way
     SetUpDeadTowers();//There may be a better way
+    DeclareHistograms();
 
     string EfficiencyFileName;
 
@@ -67,11 +78,18 @@ Int_t StMyAnalysisMaker::Init(){
     return kStOK;
 }
 
+void StMyAnalysisMaker::WriteHistograms(){
+    hEventStats->Write();
+    hTrackStats->Write();
+    hTowerStats->Write();
+}
+
 Int_t StMyAnalysisMaker::Finish(){
     cout<< "StMyAnalysisMaker::Finish()"<<endl;
 
     if(OutputFileName != ""){
         fout->cd();
+        WriteHistograms();
         fout->Write();
         fout->Close();
     }
@@ -102,46 +120,75 @@ Int_t StMyAnalysisMaker::Make(){
     }
 
     RunID = picoEvent->runId();
+    hEventStats->Fill(0);
 
     //Reject bad runs here..., if doing run by run jobs, reject bad runs while submitting jobs
-    if(!doRunbyRun && badRuns.count(RunID)>0)return kStOK;
+    if(!doRunbyRun && badRuns.count(RunID)>0){
+        hEventStats->Fill(1);
+        return kStOK;
+    }
 
     _Event->SetIdNumbers(RunID, picoEvent->eventId());
     pVtx = picoEvent->primaryVertex();
     _Event->SetPrimaryVertex(pVtx);
     //primary Z vertex cut...
-    if(abs(_Event->Vz()) > AbsZVtx_Max) return kStOK;
-
+    if(abs(_Event->Vz()) > AbsZVtx_Max){
+        hEventStats->Fill(2);
+        return kStOK;
+    }
     //Min bias trigger related event stuff...
     EventTriggers = picoEvent->triggerIds();
     _Event->SetHT1Status(IsEventHT(HTTriggers::kHT1));
     _Event->SetHT2Status(IsEventHT(HTTriggers::kHT2));
     _Event->SetHT3Status(IsEventHT(HTTriggers::kHT3));
 
-    if(doHTEventsOnly && !(_Event->IsHT()))return kStOK;
+    if(!(_Event->IsHT())){
+        hEventStats->Fill(3);
+        if(doHTEventsOnly)return kStOK;
+    }
 
     _Event->SetMBStatus(IsEventMB(MBTriggers::kVPDMB)); 
     _Event->SetMB5Status(IsEventMB(MBTriggers::kVPDMB5)); 
     _Event->SetMB30Status(IsEventMB(MBTriggers::kVPDMB30));
 
-    if(doMBEventsOnly && !(_Event->IsMB()))return kStOK;
+    if(!(_Event->IsMB())){
+        hEventStats->Fill(4);
+        if(doMBEventsOnly)return kStOK;
+    }
 
     _Event->SetRefMults(picoEvent->grefMult(), picoEvent->refMult()); 
-    _Event->SetBBCCoincidence(picoEvent->BBCx());
     _Event->SetZDCCoincidence(picoEvent->ZDCx());
 
-    centbin16 = _Event->SetCentralityDetails(grefmultCorr);
-    if(centbin16 < 0) return kStOK;
-    if(doCentSelection){
-        double cent = _Event->Centrality(); 
-        if((cent < CentralityMin) || (cent > CentralityMax)){
+    if(!doppAnalysis && !grefmultCorr){
+        cout<<"WARNING: Doing heavy-ion analysis without StRefMultCorr"<<endl;
+    }else if(!doppAnalysis){
+        grefmultCorr->init(RunID);
+        grefmultCorr->initEvent(_Event->gRefMult(), _Event->Vz(), _Event->ZDC_Coincidence());
+        //centbin9 = grefmultCorr->getCentralityBin9();
+        centbin16 = grefmultCorr->getCentralityBin16();
+        //ref9 = 8-centbin9;
+        if(centbin16 < 0){
+            hEventStats->Fill(5);
             return kStOK;
         }
-    }
-    ref16 = 15-centbin16; 
+        ref16 = 15-centbin16; 
+        _Event->SetCentrality(5.0*ref16);
+        if((_Event->Centrality() < CentralityMin) || (_Event->Centrality() > CentralityMax)){
+            hEventStats->Fill(6);
+            return kStOK;
+        }
 
-    _Event->SetMB5toMB30Reweight(grefmultCorrUtil);
+        _Event->SetCorrectedRefmult(grefmultCorr->getRefMultCorr(_Event->gRefMult(), _Event->Vz(), _Event->ZDC_Coincidence(), 2));
+        _Event->SetPeripheralReweight(grefmultCorr->getWeight());
+        grefmultCorrUtil->init(RunID);
+        grefmultCorrUtil->initEvent(_Event->gRefMult(), _Event->Vz(), _Event->ZDC_Coincidence()); 
+        _Event->SetMB5toMB30Reweight((_Event->IsMB5() && !_Event->IsMB30()) ? grefmultCorrUtil->getWeight() : 1.0);
+    }
+        
+    _Event->SetBBCCoincidence(picoEvent->BBCx());
     _Event->SetVPDVz(picoEvent->vzVpd());
+
+    hEventStats->Fill(7);
 
     RunOverEmcTriggers(); //Runs over all emc i.e., High tower (and Jet patch for pp) triggers... 
     _Event->ClearTrackArray();
@@ -200,17 +247,21 @@ void StMyAnalysisMaker::RunOverTracks(){
     for(int itrk = 0; itrk < picoDst->numberOfTracks(); itrk++){ //begin Track Loop...
         StPicoTrack *trk = static_cast<StPicoTrack*>(picoDst->track(itrk));
         if(!(trk->isPrimary())) continue; //Check if track is primary
+        hTrackStats->Fill(0);
         //Track quality cuts...
-        if(trk->gDCA(pVtx).Mag() > TrackDCAMax) continue;
-        if(trk->nHitsFit() < TrackNHitsFitMin) continue;
-        if(double(trk->nHitsFit()/trk->nHitsMax()) < TrackNHitsRatioMin) continue;
+        if(trk->gDCA(pVtx).Mag() > TrackDCAMax){hTrackStats->Fill(1); continue;}
+        if(trk->nHitsFit() < TrackNHitsFitMin){hTrackStats->Fill(2); continue;} 
+        if(double(trk->nHitsFit()/trk->nHitsMax()) < TrackNHitsRatioMin){
+            hTrackStats->Fill(3); 
+            continue;
+        }
 
         TVector3 trkMom = trk->pMom();
         double pt = trkMom.Pt();
         double eta = trkMom.Eta();
 
-        if(pt < TrackPtMin) continue; 
-        if((eta < TrackEtaMin) || (eta > TrackEtaMax)) continue;
+        if(pt < TrackPtMin){hTrackStats->Fill(4); continue;} 
+        if((eta < TrackEtaMin) || (eta > TrackEtaMax)){hTrackStats->Fill(5); continue;}
 
         if(pt > TrackPtMax) TrackPtMax = pt; 
 
@@ -219,8 +270,10 @@ void StMyAnalysisMaker::RunOverTracks(){
         int MatchedTowerIndex = trk->bemcTowerIndex();
         if(MatchedTowerIndex >= 0){
             TracksMatchedToTower[MatchedTowerIndex].push_back(itrk);
-            //cout<<"Track: "<<itrk<<" Matched Tower: "<<MatchedTowerIndex<<endl;
+            hTrackStats->Fill(6);
         }
+
+        hTrackStats->Fill(7);
 
         TStarTrack *_track = _Event->AddTrack();
         _track->SetIndex(itrk);
@@ -248,16 +301,19 @@ void StMyAnalysisMaker::RunOverTowers(){
     if(_Event->Towers->GetEntriesFast() > 0){
         cout<<"Tower array not cleared from previous event!"<<endl;
     }
-
     for(int itow = 0; itow < picoDst->numberOfBTowHits(); itow++){
         StPicoBTowHit *tower = static_cast<StPicoBTowHit*>(picoDst->btowHit(itow));
-        if(badTowers.count(itow+1)>0)continue;
-        if(deadTowers.count(itow+1)>0)continue;
-        if(tower->energy() < TowerEnergyMin)continue;
+        hTowerStats->Fill(0);
+        if(badTowers.count(itow+1)>0){hTowerStats->Fill(1); continue;}
+        if(deadTowers.count(itow+1)>0){hTowerStats->Fill(2); continue;}
+        if(tower->energy() < TowerEnergyMin){hTowerStats->Fill(3); continue;}
 
         //Get tower's position...
         TVector3 towPos = EmcPosition->getPosFromVertex(pVtx, itow+1);
-        if((towPos.Eta() < TowerEtaMin) || (towPos.Eta() > TowerEtaMax)) continue;  
+        if((towPos.Eta() < TowerEtaMin) || (towPos.Eta() > TowerEtaMax)){
+            hTowerStats->Fill(4);
+            continue;
+        }  
 
         //Start hardonic correction of tower...
         double EnergyCorr = tower->energy();
@@ -283,11 +339,13 @@ void StMyAnalysisMaker::RunOverTowers(){
             else if(TypeOfHadCorr == HadronicCorrectionType::kHighestMatchedTrackE) 
                 EnergyCorr -= maxE;
             //cout<<EnergyCorr<<endl;
-        }
+        }else{hTowerStats->Fill(5);}
 
-        if(EnergyCorr < TowerEnergyMin) continue;
+        if(EnergyCorr < TowerEnergyMin){hTowerStats->Fill(6); continue;}
         double towEt = EnergyCorr/cosh(towPos.Eta());
-        if(towEt < TowerEnergyMin) continue;
+        if(towEt < TowerEnergyMin){hTowerStats->Fill(7); continue;}
+
+        hTowerStats->Fill(8);
 
         TStarTower *_tower = _Event->AddTower();
         _tower->SetIndex(itow);
@@ -319,6 +377,43 @@ void StMyAnalysisMaker::RunOverTowerClusters(){
 
 }
 
+void StMyAnalysisMaker::DeclareHistograms(){
+    hEventStats = new TH1F("hEventStats", "Event Statistics", 9, -0.5, 8.5);
+    hEventStats->Sumw2();
+    hEventStats->GetXaxis()->SetBinLabel(1, "ALL");
+    hEventStats->GetXaxis()->SetBinLabel(2, "Bad runs");
+    hEventStats->GetXaxis()->SetBinLabel(3, Form("|V_{z}| < %0.0f", AbsZVtx_Max));
+    hEventStats->GetXaxis()->SetBinLabel(4, "no HT");
+    hEventStats->GetXaxis()->SetBinLabel(5, "not MB");
+    hEventStats->GetXaxis()->SetBinLabel(6, "Centrality > 80");
+    hEventStats->GetXaxis()->SetBinLabel(7, Form("%0.0f > Centrality > %0.0f", CentralityMin, CentralityMax));
+    hEventStats->GetXaxis()->SetBinLabel(8, "GOOD");
+
+    hTrackStats = new TH1F("hTrackStats", "Track Statistics", 9, -0.5, 8.5);
+    hTrackStats->Sumw2();
+    hTrackStats->GetXaxis()->SetBinLabel(1, "ALL");
+    hTrackStats->GetXaxis()->SetBinLabel(2, Form("DCA > %0.0f", TrackDCAMax));
+    hTrackStats->GetXaxis()->SetBinLabel(3, Form("nHitsFit > %0.0f", TrackNHitsFitMin));
+    hTrackStats->GetXaxis()->SetBinLabel(4, Form("nHits(Fit/Max) > %0.0f", TrackNHitsRatioMin));
+    hTrackStats->GetXaxis()->SetBinLabel(5, Form("p_{T} < %0.0f", TrackPtMin));
+    hTrackStats->GetXaxis()->SetBinLabel(6, Form("|#eta| > %0.0f", TrackEtaMax));
+    hTrackStats->GetXaxis()->SetBinLabel(7, "No tower match");
+    hTrackStats->GetXaxis()->SetBinLabel(8, "GOOD");
+
+    hTowerStats = new TH1F("hTowerStats", "Tower Statistics", 9, -0.5, 8.5);
+    hTowerStats->Sumw2();
+    hTowerStats->GetXaxis()->SetBinLabel(1, "ALL");
+    hTowerStats->GetXaxis()->SetBinLabel(2, "Bad");
+    hTowerStats->GetXaxis()->SetBinLabel(3, "Dead");
+    hTowerStats->GetXaxis()->SetBinLabel(4, Form("RawE < %0.0f", TowerEnergyMin));
+    hTowerStats->GetXaxis()->SetBinLabel(5, Form("|#eta| > %0.0f", TowerEtaMax));
+    hTowerStats->GetXaxis()->SetBinLabel(6, "No matched tracks");
+    hTowerStats->GetXaxis()->SetBinLabel(7, Form("E < %0.0f", TowerEnergyMin));
+    hTowerStats->GetXaxis()->SetBinLabel(8, Form("E_{T} < %0.0f", TowerEnergyMin));
+    hTowerStats->GetXaxis()->SetBinLabel(9, "GOOD");
+        
+}
+
 bool StMyAnalysisMaker::IsEventMB(MBTriggers type){
     vector<unsigned int> TriggerIds;
     switch(Run_Flag){
@@ -326,6 +421,9 @@ bool StMyAnalysisMaker::IsEventMB(MBTriggers type){
             switch(type){
                 case MBTriggers::kVPDMB : TriggerIds = {370011};break; //Why not 370001 ?
                 case MBTriggers::kVPDMB_extra : TriggerIds = {370001, 370011};break;
+                case MBTriggers::kVPDMB5 : TriggerIds = {0};break; //These dont exist for Run12 (pp)
+                case MBTriggers::kVPDMB30 : TriggerIds = {0};break;
+                case MBTriggers::kVPDMB30_extra : TriggerIds = {0};break;
                 default : TriggerIds = {370011}; 
             }break;
         case RunFlags::kRun14 :

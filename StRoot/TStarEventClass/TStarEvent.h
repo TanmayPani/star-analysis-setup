@@ -1,16 +1,12 @@
 #ifndef TStarEvent_h
 #define TStarEvent_h
-//C++ includes
-#include <vector>
-//ROOT includes
+
 #include "TObject.h"
-#include "TVector3.h"
-#include "TClonesArray.h"
 
-#include "TStarTrack.h"
-#include "TStarTower.h"
-
-#include "StRoot/StRefMultCorr/StRefMultCorr.h"
+class TVector3;
+class TClonesArray;
+class TStarTrack;
+class TStarTower;
 
 class TStarEvent : public TObject{
 public:
@@ -57,8 +53,10 @@ public:
     void SetPrimaryVertex(TVector3& p);
     void SetVPDVz(double vz){_VPD_Vz = vz;}
  
-    int  SetCentralityDetails(StRefMultCorr *rmc);
-    void SetMB5toMB30Reweight(StRefMultCorr *rmc);
+    void SetCentrality(double cent){_Centrality = cent;}
+    void SetCorrectedRefmult(double rfcorr){_RefMultCorr = rfcorr;}
+    void SetPeripheralReweight(double wt){_Peripheral_ReWeight = wt;}
+    void SetMB5toMB30Reweight(double wt){_MB5toMB30_ReWeight = wt;}
 
     void SetMBStatus(bool b){_IsMB = b;}
     void SetMB5Status(bool b){_IsMB5 = b;}
@@ -72,8 +70,8 @@ public:
     void SetNumberOfEmcTriggers(int n){_NTriggers = n;}
     TStarTrack* AddTrack();
     TStarTower* AddTower();
-    void ClearTrackArray(){Tracks->Clear();}
-    void ClearTowerArray(){Towers->Clear();}
+    void ClearTrackArray();
+    void ClearTowerArray();
     void SetMaxTrackPt(double max){_MaxTrackPt = max;}
     void SetMaxTowerEt(double max){_MaxTowerEt = max;}
 
@@ -90,7 +88,6 @@ public:
     bool _IsMB5 = false;
     bool _IsMB30 = false;
 
-    //bool IsHT0 = false;
     bool _IsHT1 = false;
     bool _IsHT2 = false;
     bool _IsHT3 = false;

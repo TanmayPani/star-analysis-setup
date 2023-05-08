@@ -6,15 +6,9 @@
 //C++ includes
 #include <set>
 #include <vector>
-#include <map>
 
 //ROOT includes
-#include "TTree.h"
-#include "TFile.h"
 #include "TVector3.h"
-#include "TLorentzVector.h"
-
-using namespace std;
 
 class StRefMultCorr;
 class StEmcPosition2;
@@ -23,7 +17,9 @@ class StPicoDst;
 class StPicoEvent;
 class StPicoTrack;
 class TStarEvent;
-//class TVector3;
+//class TTree;
+class TFile;
+class TH1F;
 
 class StMyAnalysisMaker : public StMaker {
 public:
@@ -44,7 +40,7 @@ public:
     void SetRunFlag(RunFlags run){Run_Flag = run;}
     void SetZVtxRange(double min, double max){ZVtx_Min = min; ZVtx_Max = max;}
     void SetAbsZVtxMax(double z){AbsZVtx_Max = z;}
-    void SetCentralityRange(double min, double max){CentralityMin = min; CentralityMax = max;}
+    void SetCentralityRange(double min, double max){CentralityMin = min; CentralityMax = max; doCentSelection = true;}
 
     void SetdoppAnalysis(bool b){doppAnalysis = b;}
     void SetdoRunbyRun(bool b){doRunbyRun = b;}
@@ -74,15 +70,17 @@ public:
 private:
     double pi0mass = 0.13957;
     // bad and dead tower list functions and arrays
-    set<int>        badTowers;
-    set<int>        deadTowers;
+    std::set<int>        badTowers;
+    std::set<int>        deadTowers;
     // bad run list 
-    set<int>        badRuns;
+    std::set<int>        badRuns;
 
-    //May make these SetUp functions public or protected...
+    //Various functions to initialize stuff in Init()...
     void SetUpBadRuns();
     void SetUpBadTowers();
     void SetUpDeadTowers();
+    void DeclareHistograms();
+    void WriteHistograms();
 
     //To check event for triggers...
     bool IsEventMB(MBTriggers mbtype);
@@ -104,8 +102,8 @@ private:
     TFile *EfficiencyFile = nullptr;
 
     //Need these to Set StMaker name, and get required objects from *.PicoDst.root files...
-    string AnaName = "";
-    string OutputFileName = "";
+    std::string AnaName = "";
+    std::string OutputFileName = "";
     StPicoDstMaker *picoDst_Maker = nullptr;
     StPicoDst *picoDst = nullptr;
     StPicoEvent *picoEvent = nullptr;
@@ -150,8 +148,8 @@ private:
     double TowerEnergyMin = 0.2;
 
     //2-D vector containing all tracks matched to tower
-    vector<vector<bool>> HighTowerStatus;
-    vector<vector<int>> TracksMatchedToTower;  
+    std::vector<std::vector<bool>> HighTowerStatus;
+    std::vector<std::vector<int>> TracksMatchedToTower;  
 
     double TrackPtMax = 0;
     double TowerEtMax = 0;
@@ -160,10 +158,10 @@ private:
     double JetConstituentMinPt = 2.0;
 
     TFile *fout = nullptr;
-    TTree *tree = nullptr;  
+    TTree *tree = nullptr; 
 
 protected:
-    vector<unsigned int> EventTriggers;
+    std::vector<unsigned int> EventTriggers;
 
     int RunID = 0;
     int EventID = 0;
@@ -176,6 +174,10 @@ protected:
     TVector3 pVtx;
 
     TStarEvent *_Event = nullptr;
+
+    TH1F *hEventStats = nullptr;
+    TH1F *hTrackStats = nullptr;
+    TH1F *hTowerStats = nullptr;
  
     ClassDef(StMyAnalysisMaker, 2)
 };

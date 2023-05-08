@@ -10,8 +10,9 @@ class StMaker;
 class StChain;
 class StPicoDstMaker;
 
-// jet-framework STAR classes
+// my framework classes
 class StMyAnalysisMaker;
+class StMyJetMaker;
 // constants
 const double pi = 1.0*TMath::Pi();
 
@@ -58,7 +59,7 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
 
       bool useEmcPidTraits = false;
       bool doEmbedding = false;
-      bool makeJetTree = false;
+      bool makeJetTree = true;
 
       // create chain to take in makers
       StChain* chain = new StChain();

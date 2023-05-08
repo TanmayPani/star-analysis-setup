@@ -1,1 +1,0 @@
-../../../../StRoot/StMyJetMaker/StJetTreeStruct.h
