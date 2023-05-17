@@ -148,7 +148,7 @@ private:
     double TowerEnergyMin = 0.2;
 
     //2-D vector containing all tracks matched to tower
-    std::vector<std::vector<bool>> HighTowerStatus;
+    //std::vector<std::vector<bool>> HighTowerStatus;
     std::vector<std::vector<int>> TracksMatchedToTower;  
 
     double TrackPtMax = 0;

@@ -46,7 +46,7 @@ Int_t StMyJetMaker::Init(){
     jet_def = new JetDefinition(antikt_algorithm, R, BIpt2_scheme, Best);
 
     area_spec = new GhostedAreaSpec(MaxRap);
-    area_def =  new AreaDefinition(active_area_explicit_ghosts, *area_spec);
+    area_def = new AreaDefinition(active_area_explicit_ghosts, *area_spec);
 
     bkg_jet_def = new JetDefinition(kt_algorithm, R, BIpt2_scheme, Best);
     Selector bkg_selector = SelectorAbsRapMax(3.0)*(!SelectorNHardest(2));
@@ -138,7 +138,7 @@ Int_t StMyJetMaker::Make(){
 
     for(PseudoJet& _jet : _jets){//BEGIN jet loop
         TStarJet *jet = _JetEvent->AddJet(_jet);
-        cout<<_jet.pt()<<" "<<jet->Pt()<<endl;
+        //cout<<_jet.pt()<<" "<<jet->Pt()<<endl;
         if(!doMCJets){ 
             jet->SetRho(mBGE->rho(_jet));
             jet->SetSigma(mBGE->sigma(_jet));
@@ -149,9 +149,19 @@ Int_t StMyJetMaker::Make(){
         }   
     }
 
-    cout<<"# jets: "<<_JetEvent->NumberOfJets()<<" Rho: "<<_JetEvent->Rho()<<endl;
+    //cout<<"# jets: "<<_JetEvent->NumberOfJets()<<" Rho: "<<_JetEvent->Rho()<<endl;
 
     tree->Fill();
+
+    if(CS){
+        delete CS;
+        CS = nullptr;
+    }
+
+    if(CS_Area){
+        delete CS_Area;
+        CS_Area = nullptr;
+    }
 
     return kStOK;
 }

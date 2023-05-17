@@ -19,10 +19,6 @@ public:
     double Z() {return _Z;}
     double E() {return _E;}
     double RawE() {return _RawE;}
-    bool IsHT0() {return _IsHT0;}
-    bool IsHT1() {return _IsHT1;}
-    bool IsHT2() {return _IsHT2;}
-    bool IsHT3() {return _IsHT3;}
     int Index() {return _Index;}
     int ADC() {return _ADC;}
     int NMatchedTracks() {return _NMatchedTracks;}
@@ -40,7 +36,6 @@ public:
     double Phi();// \phi \in [0, 2\pi]
     double Phi_Std(){return std::atan2(_Y, _X);} // \phi \in [-\pi, \pi] 
 
-    void SetHighTowerStatus(std::vector<bool> htstat);
     void SetIndex(int i) {_Index = i;}
     void SetADC(int adc) {_ADC = adc;}
     void SetE(double e) {_E = e;}
@@ -59,10 +54,6 @@ public:
     double _X = 0;
     double _Y = 0;
     double _Z = 0;
-    bool _IsHT0 = false;
-    bool _IsHT1 = false;
-    bool _IsHT2 = false;
-    bool _IsHT3 = false;
     int _NMatchedTracks = 0;
 
     ClassDef(TStarTower, 1)

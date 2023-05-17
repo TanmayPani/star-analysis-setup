@@ -21,9 +21,8 @@ public:
     int RefMult(){return _RefMult;}
     double RefMultCorr(){return _RefMultCorr;}
     double Centrality(){return _Centrality;}
-    double Peripheral_Reweight(){return _Peripheral_ReWeight;}
+    double Weight(){return _Weight;}
 
-    double MB5toMB30_ReWeight(){return _MB5toMB30_ReWeight;}
     bool IsMB(){return (_IsMB || _IsMB5 || _IsMB30);}
     bool IsMB5(){return _IsMB5;}
     bool IsMB30(){return _IsMB30;}
@@ -38,9 +37,7 @@ public:
     double VPD_Vz(){return _VPD_Vz;}
     double ZDC_Coincidence(){return _ZDCxx;}
     double BBC_Coincidence(){return _BBCxx;}
-    double NumberOfEmcTriggers(){return _NTriggers;}
     double NumberOfGlobalTracks(){return _NGlobalTracks;}
-    double NumberOfTowers(){return _NTowers;}
     TClonesArray* GetTracks(){return Tracks;}
     TClonesArray* GetTowers(){return Towers;} 
     double MaxTrackPt(){return _MaxTrackPt;}
@@ -55,8 +52,7 @@ public:
  
     void SetCentrality(double cent){_Centrality = cent;}
     void SetCorrectedRefmult(double rfcorr){_RefMultCorr = rfcorr;}
-    void SetPeripheralReweight(double wt){_Peripheral_ReWeight = wt;}
-    void SetMB5toMB30Reweight(double wt){_MB5toMB30_ReWeight = wt;}
+    void SetWeight(double wt){_Weight = wt;}
 
     void SetMBStatus(bool b){_IsMB = b;}
     void SetMB5Status(bool b){_IsMB5 = b;}
@@ -66,8 +62,6 @@ public:
     void SetHT3Status(bool b){_IsHT3 = b;}
 
     void SetNumberOfGlobalTracks(int n){_NGlobalTracks = n;}
-    void SetNumberOfTowers(int n){_NTowers = n;}
-    void SetNumberOfEmcTriggers(int n){_NTriggers = n;}
     TStarTrack* AddTrack();
     TStarTower* AddTower();
     void ClearTrackArray();
@@ -81,9 +75,8 @@ public:
     int _RefMult = 0;
     double _RefMultCorr = 0;
     double _Centrality = -99;
-    double _Peripheral_ReWeight = 1;
+    double _Weight = 1.0;
 
-    double _MB5toMB30_ReWeight = 0;
     bool _IsMB = false;
     bool _IsMB5 = false;
     bool _IsMB30 = false;
@@ -98,9 +91,7 @@ public:
     double _ZDCxx = 0;
     double _BBCxx = 0;
 
-    int _NTriggers = 0;
     int _NGlobalTracks = 0;
-    int _NTowers = 0;
 
     double _MaxTrackPt = 0;
     double _MaxTowerEt = 0;

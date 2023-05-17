@@ -34,7 +34,6 @@ StMaker(name.c_str()){
     OutputFileName = output;
 
     TracksMatchedToTower.resize(4800);
-    HighTowerStatus.assign(4800, {false, false, false, false});
 }
 
 StMyAnalysisMaker::~StMyAnalysisMaker(){
@@ -179,10 +178,10 @@ Int_t StMyAnalysisMaker::Make(){
         }
 
         _Event->SetCorrectedRefmult(grefmultCorr->getRefMultCorr(_Event->gRefMult(), _Event->Vz(), _Event->ZDC_Coincidence(), 2));
-        _Event->SetPeripheralReweight(grefmultCorr->getWeight());
-        grefmultCorrUtil->init(RunID);
-        grefmultCorrUtil->initEvent(_Event->gRefMult(), _Event->Vz(), _Event->ZDC_Coincidence()); 
-        _Event->SetMB5toMB30Reweight((_Event->IsMB5() && !_Event->IsMB30()) ? grefmultCorrUtil->getWeight() : 1.0);
+        _Event->SetWeight(grefmultCorr->getWeight());
+        //grefmultCorrUtil->init(RunID);
+        //grefmultCorrUtil->initEvent(_Event->gRefMult(), _Event->Vz(), _Event->ZDC_Coincidence()); 
+        //_Event->SetMB5toMB30Reweight((_Event->IsMB5() && !_Event->IsMB30()) ? grefmultCorrUtil->getWeight() : 1.0);
     }
         
     _Event->SetBBCCoincidence(picoEvent->BBCx());
@@ -190,7 +189,7 @@ Int_t StMyAnalysisMaker::Make(){
 
     hEventStats->Fill(7);
 
-    RunOverEmcTriggers(); //Runs over all emc i.e., High tower (and Jet patch for pp) triggers... 
+    //RunOverEmcTriggers(); //Runs over all emc i.e., High tower (and Jet patch for pp) triggers... 
     _Event->ClearTrackArray();
     RunOverTracks(); //Runs over all tracks
     _Event->ClearTowerArray();
@@ -205,7 +204,7 @@ void StMyAnalysisMaker::BookTree(){
     if(OutputFileName == ""){
         cout<<"Trees are not being written to any file!"<<endl;
         tree = new TTree("Event_Info", "Tree with event Info");
-        tree->Branch("Events", "TStarEvent", &(_Event)); 
+        tree->Branch("Events", &(_Event)); 
     }else{
         fout = new TFile(OutputFileName.c_str(), "UPDATE");
         fout->cd();
@@ -219,20 +218,20 @@ void StMyAnalysisMaker::BookTree(){
     }
 }
 
-void StMyAnalysisMaker::RunOverEmcTriggers(){
-    _Event->SetNumberOfEmcTriggers(picoDst->numberOfEmcTriggers());
-    //empty and initialize HighTowerStatus arrays for all 4800 towers 
-    HighTowerStatus.assign(4800, {false, false, false, false});
-
-    for(int itrig = 0; itrig < picoDst->numberOfEmcTriggers(); itrig++){
-        StPicoEmcTrigger *trigger = static_cast<StPicoEmcTrigger*>(picoDst->emcTrigger(itrig));
-        int itow = trigger->id() - 1;
-        if(trigger->isHT0())      {HighTowerStatus[itow][0] = true;}
-        else if(trigger->isHT1()) {HighTowerStatus[itow][1] = true;}
-        else if(trigger->isHT2()) {HighTowerStatus[itow][2] = true;}
-        else if(trigger->isHT3()) {HighTowerStatus[itow][3] = true;}
-    }
-}
+//void StMyAnalysisMaker::RunOverEmcTriggers(){
+//    //_Event->SetNumberOfEmcTriggers(picoDst->numberOfEmcTriggers());
+//    //empty and initialize HighTowerStatus arrays for all 4800 towers 
+//    HighTowerStatus.assign(4800, {false, false, false, false});
+//
+//    for(int itrig = 0; itrig < picoDst->numberOfEmcTriggers(); itrig++){
+//        StPicoEmcTrigger *trigger = static_cast<StPicoEmcTrigger*>(picoDst->emcTrigger(itrig));
+//        int itow = trigger->id() - 1;
+//        if(trigger->isHT0())      {HighTowerStatus[itow][0] = true;}
+//        else if(trigger->isHT1()) {HighTowerStatus[itow][1] = true;}
+//        else if(trigger->isHT2()) {HighTowerStatus[itow][2] = true;}
+//        else if(trigger->isHT3()) {HighTowerStatus[itow][3] = true;}
+//    }
+//}
 
 void StMyAnalysisMaker::RunOverTracks(){
     _Event->SetNumberOfGlobalTracks(picoDst->numberOfTracks());
@@ -294,7 +293,6 @@ void StMyAnalysisMaker::RunOverTracks(){
 }
 
 void StMyAnalysisMaker::RunOverTowers(){    
-    _Event->SetNumberOfTowers(picoDst->numberOfBTowHits());
 
     TowerEtMax = 0;
 
@@ -353,7 +351,6 @@ void StMyAnalysisMaker::RunOverTowers(){
         _tower->SetE(EnergyCorr);
         _tower->SetRawE(tower->energy());
         _tower->SetPosXYZ(towPos);
-        _tower->SetHighTowerStatus(HighTowerStatus[itow]);
         _tower->SetNMatchedTracks(TracksMatchedToTower[itow].size());
 
         if(towEt > TowerEtMax)TowerEtMax = towEt;
@@ -382,21 +379,21 @@ void StMyAnalysisMaker::DeclareHistograms(){
     hEventStats->Sumw2();
     hEventStats->GetXaxis()->SetBinLabel(1, "ALL");
     hEventStats->GetXaxis()->SetBinLabel(2, "Bad runs");
-    hEventStats->GetXaxis()->SetBinLabel(3, Form("|V_{z}| < %0.0f", AbsZVtx_Max));
+    hEventStats->GetXaxis()->SetBinLabel(3, Form("|V_{z}| < %0.2f", AbsZVtx_Max));
     hEventStats->GetXaxis()->SetBinLabel(4, "no HT");
     hEventStats->GetXaxis()->SetBinLabel(5, "not MB");
     hEventStats->GetXaxis()->SetBinLabel(6, "Centrality > 80");
-    hEventStats->GetXaxis()->SetBinLabel(7, Form("%0.0f > Centrality > %0.0f", CentralityMin, CentralityMax));
+    hEventStats->GetXaxis()->SetBinLabel(7, Form("%0.0f > Centrality > %0.2f", CentralityMin, CentralityMax));
     hEventStats->GetXaxis()->SetBinLabel(8, "GOOD");
 
     hTrackStats = new TH1F("hTrackStats", "Track Statistics", 9, -0.5, 8.5);
     hTrackStats->Sumw2();
     hTrackStats->GetXaxis()->SetBinLabel(1, "ALL");
-    hTrackStats->GetXaxis()->SetBinLabel(2, Form("DCA > %0.0f", TrackDCAMax));
-    hTrackStats->GetXaxis()->SetBinLabel(3, Form("nHitsFit > %0.0f", TrackNHitsFitMin));
-    hTrackStats->GetXaxis()->SetBinLabel(4, Form("nHits(Fit/Max) > %0.0f", TrackNHitsRatioMin));
-    hTrackStats->GetXaxis()->SetBinLabel(5, Form("p_{T} < %0.0f", TrackPtMin));
-    hTrackStats->GetXaxis()->SetBinLabel(6, Form("|#eta| > %0.0f", TrackEtaMax));
+    hTrackStats->GetXaxis()->SetBinLabel(2, Form("DCA > %0.2f", TrackDCAMax));
+    hTrackStats->GetXaxis()->SetBinLabel(3, Form("nHitsFit > %0.2f", TrackNHitsFitMin));
+    hTrackStats->GetXaxis()->SetBinLabel(4, Form("nHits(Fit/Max) > %0.2f", TrackNHitsRatioMin));
+    hTrackStats->GetXaxis()->SetBinLabel(5, Form("p_{T} < %0.2f", TrackPtMin));
+    hTrackStats->GetXaxis()->SetBinLabel(6, Form("|#eta| > %0.2f", TrackEtaMax));
     hTrackStats->GetXaxis()->SetBinLabel(7, "No tower match");
     hTrackStats->GetXaxis()->SetBinLabel(8, "GOOD");
 
@@ -405,11 +402,11 @@ void StMyAnalysisMaker::DeclareHistograms(){
     hTowerStats->GetXaxis()->SetBinLabel(1, "ALL");
     hTowerStats->GetXaxis()->SetBinLabel(2, "Bad");
     hTowerStats->GetXaxis()->SetBinLabel(3, "Dead");
-    hTowerStats->GetXaxis()->SetBinLabel(4, Form("RawE < %0.0f", TowerEnergyMin));
-    hTowerStats->GetXaxis()->SetBinLabel(5, Form("|#eta| > %0.0f", TowerEtaMax));
+    hTowerStats->GetXaxis()->SetBinLabel(4, Form("RawE < %0.2f", TowerEnergyMin));
+    hTowerStats->GetXaxis()->SetBinLabel(5, Form("|#eta| > %0.2f", TowerEtaMax));
     hTowerStats->GetXaxis()->SetBinLabel(6, "No matched tracks");
-    hTowerStats->GetXaxis()->SetBinLabel(7, Form("E < %0.0f", TowerEnergyMin));
-    hTowerStats->GetXaxis()->SetBinLabel(8, Form("E_{T} < %0.0f", TowerEnergyMin));
+    hTowerStats->GetXaxis()->SetBinLabel(7, Form("E < %0.2f", TowerEnergyMin));
+    hTowerStats->GetXaxis()->SetBinLabel(8, Form("E_{T} < %0.2f", TowerEnergyMin));
     hTowerStats->GetXaxis()->SetBinLabel(9, "GOOD");
         
 }

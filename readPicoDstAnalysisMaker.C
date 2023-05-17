@@ -50,13 +50,7 @@ void LoadLibs(){
 void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.list", string outputFile="test.root", int nEvents = 10000){
       // Load necessary libraries and macros
       LoadLibs();
-      
-      enum RunFlags{kRun12 = 12, kRun14 = 14};
-      enum HadronicCorrectionType{kNone_ = 0, kHighestMatchedTrackE = 1, kFull = 2};
-
-      //RunFlags run_flag = RunFlags::kRun14;
-      //HadronicCorrectionType hcorrtype = HadronicCorrectionType::kFull;
-
+    
       bool useEmcPidTraits = false;
       bool doEmbedding = false;
       bool makeJetTree = true;
@@ -84,7 +78,7 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
       fout->Close();
 
       StMyAnalysisMaker *anaMaker = new StMyAnalysisMaker("StMyAnalysisMaker", eventOutputFile);
-      //anaMaker->SetRunFlag(RunFlags::kRun14);
+      anaMaker->SetRunFlag(StMyAnalysisMaker::RunFlags::kRun14);
       anaMaker->SetdoppAnalysis(false);
       anaMaker->SetdoRunbyRun(true);
 
@@ -103,7 +97,7 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
       anaMaker->SetTowerEtaMin(-1.0);
       anaMaker->SetTowerEtaMax(1.0);
       anaMaker->SetTowerEnergyMin(0.2);
-      //anaMaker->SetTowerHadronicCorrType(HadronicCorrectionType::kFull);
+      anaMaker->SetTowerHadronicCorrType(StMyAnalysisMaker::HadronicCorrectionType::kFull);
 
       TFile *fjetout = NULL;
   
@@ -113,6 +107,10 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
         fjetout->Close();
 
         StMyJetMaker *jetMaker = new StMyJetMaker("StMyJetMaker", "StMyAnalysisMaker", jetOutputFile);
+        jetMaker->SetJetRadius(0.4);
+        jetMaker->SetDoMCJets(false);
+        jetMaker->SetJetPtMin(10.0);
+        jetMaker->SetJetAbsEtaMax(0.6);//1.0-R
       }
        // initialize chain
       chain->Init();

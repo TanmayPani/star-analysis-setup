@@ -31,18 +31,6 @@ TStarTower::~TStarTower(){
 
 }
 
-void TStarTower::SetHighTowerStatus(vector<bool> htstat){
-    if(htstat.size()!=4){
-        cout<<"Something is wrong!"<<endl;
-        return;
-    }else{
-        _IsHT0 = htstat[0];
-        _IsHT1 = htstat[1];
-        _IsHT2 = htstat[2];
-        _IsHT3 = htstat[3];
-    }
-}
-
 double TStarTower::Px(){
     double r = sqrt(_X*_X + _Y*_Y + _Z*_Z);   
     return P()*_X/r;

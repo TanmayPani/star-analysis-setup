@@ -65,14 +65,14 @@ class StMyJetMaker : public StMaker{
         double JetEtaMax = 0.6;
         double JetAbsEtaMax = 0.6;
 
-        fastjet::JetDefinition *jet_def = nullptr;
-        fastjet::JetDefinition *bkg_jet_def = nullptr;
+        fastjet::JetDefinition* jet_def = nullptr;
+        fastjet::JetDefinition* bkg_jet_def = nullptr;
 
-        fastjet::GhostedAreaSpec *area_spec = nullptr;
-        fastjet::AreaDefinition *area_def = nullptr;
+        fastjet::GhostedAreaSpec* area_spec = nullptr;
+        fastjet::AreaDefinition* area_def = nullptr;
 
-        fastjet::ClusterSequence *CS = nullptr;
-        fastjet::ClusterSequenceArea *CS_Area = nullptr;
+        fastjet::ClusterSequence* CS = nullptr;
+        fastjet::ClusterSequenceArea* CS_Area = nullptr;
 
         fastjet::JetMedianBackgroundEstimator* mBGE = nullptr; 
 
