@@ -12,13 +12,13 @@ TStarTower::TStarTower(){
 
 }
 
-TStarTower::TStarTower(int& Id, int& adc, double& e){
+TStarTower::TStarTower(unsigned int Id, unsigned int adc, float e){
     _Index = Id;
     _ADC = adc;
     _E = e;
 }
 
-TStarTower::TStarTower(int& Id, int& adc, double& e, TVector3& towPos){
+TStarTower::TStarTower(unsigned int Id, unsigned int adc, float e, TVector3& towPos){
     _Index = Id;
     _ADC = adc;
     _E = e;
@@ -31,23 +31,23 @@ TStarTower::~TStarTower(){
 
 }
 
-double TStarTower::Px(){
-    double r = sqrt(_X*_X + _Y*_Y + _Z*_Z);   
+float TStarTower::Px(){
+    float r = sqrt(_X*_X + _Y*_Y + _Z*_Z);   
     return P()*_X/r;
 }
 
-double TStarTower::Py(){
-    double r = sqrt(_X*_X + _Y*_Y + _Z*_Z);
+float TStarTower::Py(){
+    float r = sqrt(_X*_X + _Y*_Y + _Z*_Z);
     return P()*_Y/r;
 }
 
-double TStarTower::Pz(){
-    double r = sqrt(_X*_X + _Y*_Y + _Z*_Z);
+float TStarTower::Pz(){
+    float r = sqrt(_X*_X + _Y*_Y + _Z*_Z);
     return P()*_Z/r;
 }
 
-double TStarTower::Phi(){
-   double phi = atan2(_Y, _X);
+float TStarTower::Phi(){
+   float phi = atan2(_Y, _X);
    if(phi < 0.0) return phi+2.0*TMath::Pi();
    else if(phi > 2.0*TMath::Pi()) return phi-2.0*TMath::Pi();
    else return phi; 

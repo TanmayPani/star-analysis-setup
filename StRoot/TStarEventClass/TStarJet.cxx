@@ -23,7 +23,7 @@ TStarJet::TStarJet(PseudoJet& _jet){
     Constituents = new TClonesArray("TStarJetConstituent", 50);
 }
 
-TStarJet::TStarJet(double e, double px, double py, double pz){
+TStarJet::TStarJet(float e, float px, float py, float pz){
     _E = e;
     _Px = px;
     _Py = py;
@@ -37,8 +37,8 @@ TStarJet::~TStarJet(){
     }
 }
 
-double TStarJet::Phi(){
-    double phi = Phi_Std();
+float TStarJet::Phi(){
+    float phi = Phi_Std();
     if(phi < 0.0) return phi+2.0*TMath::Pi();
     else if(phi > 2.0*TMath::Pi()) return phi-2.0*TMath::Pi();
     else return phi; 

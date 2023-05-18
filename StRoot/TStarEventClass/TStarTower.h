@@ -10,51 +10,51 @@
 class TStarTower : public TObject{
 public:
     TStarTower();
-    TStarTower(int& id, int& adc, double& E);
-    TStarTower(int& id, int& adc, double& E, TVector3& pos);
+    TStarTower(unsigned int id, unsigned int adc, float E);
+    TStarTower(unsigned int id, unsigned int adc, float E, TVector3& pos);
     virtual ~TStarTower();
 
-    double X() {return _X;}
-    double Y() {return _Y;}
-    double Z() {return _Z;}
-    double E() {return _E;}
-    double RawE() {return _RawE;}
-    int Index() {return _Index;}
-    int ADC() {return _ADC;}
-    int NMatchedTracks() {return _NMatchedTracks;}
+    float X() {return _X;}
+    float Y() {return _Y;}
+    float Z() {return _Z;}
+    float E() {return _E;}
+    float RawE() {return _RawE;}
+    unsigned int Index() {return _Index;}
+    unsigned int ADC() {return _ADC;}
+    unsigned int NMatchedTracks() {return _NMatchedTracks;}
     
-    double mass = 0.13957;
-    void SetMass(double m){mass = m;}
+    float mass = 0.13957;
+    void SetMass(float m){mass = m;}
 
-    double P(){return std::sqrt(_E*_E - mass*mass);} 
-    double Px(); 
-    double Py(); 
-    double Pz(); 
-    double Pt() {return std::sqrt(Px()*Px() + Py()*Py());} 
-    double Theta() {return std::atan2(std::sqrt(_X*_X + _Y*_Y), std::abs(_Z));}
-    double Eta() {return -1.0*std::log(std::tan(0.5*Theta()));}
-    double Phi();// \phi \in [0, 2\pi]
-    double Phi_Std(){return std::atan2(_Y, _X);} // \phi \in [-\pi, \pi] 
+    float P(){return std::sqrt(_E*_E - mass*mass);} 
+    float Px(); 
+    float Py(); 
+    float Pz(); 
+    float Pt() {return std::sqrt(Px()*Px() + Py()*Py());} 
+    float Theta() {return std::atan2(std::sqrt(_X*_X + _Y*_Y), std::abs(_Z));}
+    float Eta() {return -1.0*std::log(std::tan(0.5*Theta()));}
+    float Phi();// \phi \in [0, 2\pi]
+    float Phi_Std(){return std::atan2(_Y, _X);} // \phi \in [-\pi, \pi] 
 
     void SetIndex(int i) {_Index = i;}
     void SetADC(int adc) {_ADC = adc;}
-    void SetE(double e) {_E = e;}
-    void SetRawE(double e) {_RawE = e;}
+    void SetE(float e) {_E = e;}
+    void SetRawE(float e) {_RawE = e;}
     void SetNMatchedTracks(int n) {_NMatchedTracks = n;}
-    void SetPosX(double x) {_X = x;}
-    void SetPosY(double y) {_Y = y;}
-    void SetPosZ(double z) {_Z = z;}
-    inline void SetPosXYZ(double x, double y, double z) {_X = x; _Y = y; _Z = z;}
+    void SetPosX(float x) {_X = x;}
+    void SetPosY(float y) {_Y = y;}
+    void SetPosZ(float z) {_Z = z;}
+    inline void SetPosXYZ(float x, float y, float z) {_X = x; _Y = y; _Z = z;}
     inline void SetPosXYZ(TVector3& pos){_X = pos.x(); _Y = pos.y(); _Z = pos.z();}
 
-    int _Index = 0;
-    int _ADC = 0;
-    double _E = 0;
-    double _RawE = 0;
-    double _X = 0;
-    double _Y = 0;
-    double _Z = 0;
-    int _NMatchedTracks = 0;
+    unsigned int _Index = 0;
+    unsigned int _ADC = 0;
+    float _E = 0;
+    float _RawE = 0;
+    float _X = 0;
+    float _Y = 0;
+    float _Z = 0;
+    unsigned int _NMatchedTracks = 0;
 
     ClassDef(TStarTower, 1)
 };

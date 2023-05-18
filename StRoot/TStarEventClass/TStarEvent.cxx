@@ -15,7 +15,7 @@ TStarEvent::TStarEvent(){
 
 }
 
-TStarEvent::TStarEvent(int runid, int eventid){
+TStarEvent::TStarEvent(unsigned int runid, unsigned int eventid){
     _RunID = runid;
     _EventID = eventid;
     Tracks = new TClonesArray("TStarTrack", 1000);

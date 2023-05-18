@@ -11,17 +11,17 @@ class TStarTower;
 class TStarEvent : public TObject{
 public:
     TStarEvent();
-    TStarEvent(int runid, int eventid);
+    TStarEvent(unsigned int runid, unsigned int eventid);
     virtual ~TStarEvent();
 
-    int RunNumber(){return _RunID;}
-    int EventNumber(){return _EventID;}
+    unsigned int RunNumber(){return _RunID;}
+    unsigned int EventNumber(){return _EventID;}
 
-    int gRefMult(){return _gRefMult;}
-    int RefMult(){return _RefMult;}
-    double RefMultCorr(){return _RefMultCorr;}
-    double Centrality(){return _Centrality;}
-    double Weight(){return _Weight;}
+    unsigned int gRefMult(){return _gRefMult;}
+    unsigned int RefMult(){return _RefMult;}
+    float RefMultCorr(){return _RefMultCorr;}
+    unsigned char Centrality(){return _Centrality;}
+    float Weight(){return _Weight;}
 
     bool IsMB(){return (_IsMB || _IsMB5 || _IsMB30);}
     bool IsMB5(){return _IsMB5;}
@@ -32,27 +32,27 @@ public:
     bool IsHT3(){return _IsHT3;}
     bool IsHT(){return (_IsHT1 || _IsHT2 || _IsHT2);}
 
-    double Vz(){return _pVtx_Z;}
-    double Vr(){return _pVtx_r;}
-    double VPD_Vz(){return _VPD_Vz;}
-    double ZDC_Coincidence(){return _ZDCxx;}
-    double BBC_Coincidence(){return _BBCxx;}
-    double NumberOfGlobalTracks(){return _NGlobalTracks;}
+    float Vz(){return _pVtx_Z;}
+    float Vr(){return _pVtx_r;}
+    float VPD_Vz(){return _VPD_Vz;}
+    float ZDC_Coincidence(){return _ZDCxx;}
+    float BBC_Coincidence(){return _BBCxx;}
+    unsigned short NumberOfGlobalTracks(){return _NGlobalTracks;}
     TClonesArray* GetTracks(){return Tracks;}
     TClonesArray* GetTowers(){return Towers;} 
-    double MaxTrackPt(){return _MaxTrackPt;}
-    double MaxTowerEt(){return _MaxTowerEt;}
+    float MaxTrackPt(){return _MaxTrackPt;}
+    float MaxTowerEt(){return _MaxTowerEt;}
 
-    void SetIdNumbers(int runid, int eventid){_RunID = runid; _EventID = eventid;}
+    void SetIdNumbers(unsigned int runid, unsigned int eventid){_RunID = runid; _EventID = eventid;}
     void SetRefMults(int gref, int ref){_gRefMult = gref; _RefMult = ref;}
-    void SetZDCCoincidence(double zdcx){_ZDCxx = zdcx;}
-    void SetBBCCoincidence(double bbcx){_BBCxx = bbcx;}
+    void SetZDCCoincidence(float zdcx){_ZDCxx = zdcx;}
+    void SetBBCCoincidence(float bbcx){_BBCxx = bbcx;}
     void SetPrimaryVertex(TVector3& p);
-    void SetVPDVz(double vz){_VPD_Vz = vz;}
+    void SetVPDVz(float vz){_VPD_Vz = vz;}
  
-    void SetCentrality(double cent){_Centrality = cent;}
-    void SetCorrectedRefmult(double rfcorr){_RefMultCorr = rfcorr;}
-    void SetWeight(double wt){_Weight = wt;}
+    void SetCentrality(int cent){_Centrality = (cent >= 1 && cent <= 16) ? cent : 0;}
+    void SetCorrectedRefmult(float rfcorr){_RefMultCorr = rfcorr;}
+    void SetWeight(float wt){_Weight = wt;}
 
     void SetMBStatus(bool b){_IsMB = b;}
     void SetMB5Status(bool b){_IsMB5 = b;}
@@ -61,21 +61,21 @@ public:
     void SetHT2Status(bool b){_IsHT2 = b;}
     void SetHT3Status(bool b){_IsHT3 = b;}
 
-    void SetNumberOfGlobalTracks(int n){_NGlobalTracks = n;}
+    void SetNumberOfGlobalTracks(unsigned short n){_NGlobalTracks = n;}
     TStarTrack* AddTrack();
     TStarTower* AddTower();
     void ClearTrackArray();
     void ClearTowerArray();
-    void SetMaxTrackPt(double max){_MaxTrackPt = max;}
-    void SetMaxTowerEt(double max){_MaxTowerEt = max;}
+    void SetMaxTrackPt(float max){_MaxTrackPt = max;}
+    void SetMaxTowerEt(float max){_MaxTowerEt = max;}
 
-    int _RunID = 0;
-    int _EventID = 0;
-    int _gRefMult = 0;
-    int _RefMult = 0;
-    double _RefMultCorr = 0;
-    double _Centrality = -99;
-    double _Weight = 1.0;
+    unsigned int _RunID = 0;
+    unsigned int _EventID = 0;
+    unsigned int _gRefMult = 0;
+    unsigned int _RefMult = 0;
+    float _RefMultCorr = 0;
+    unsigned char _Centrality = 0;
+    float _Weight = 1.0;
 
     bool _IsMB = false;
     bool _IsMB5 = false;
@@ -85,16 +85,16 @@ public:
     bool _IsHT2 = false;
     bool _IsHT3 = false;
 
-    double _pVtx_Z = -999;
-    double _pVtx_r = -99;
-    double _VPD_Vz = -999;
-    double _ZDCxx = 0;
-    double _BBCxx = 0;
+    float _pVtx_Z = -999;
+    float _pVtx_r = -99;
+    float _VPD_Vz = -999;
+    float _ZDCxx = 0;
+    float _BBCxx = 0;
 
-    int _NGlobalTracks = 0;
+    unsigned short _NGlobalTracks = 0;
 
-    double _MaxTrackPt = 0;
-    double _MaxTowerEt = 0;
+    float _MaxTrackPt = 0;
+    float _MaxTowerEt = 0;
 
     TClonesArray *Tracks;
     TClonesArray *Towers;

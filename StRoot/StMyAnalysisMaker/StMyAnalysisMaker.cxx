@@ -15,7 +15,7 @@
 #include "StRoot/StPicoDstMaker/StPicoDstMaker.h"
 #include "StRoot/StPicoEvent/StPicoEvent.h"
 #include "StRoot/StPicoEvent/StPicoTrack.h"
-#include "StRoot/StPicoEvent/StPicoEmcTrigger.h"
+//#include "StRoot/StPicoEvent/StPicoEmcTrigger.h"
 #include "StRoot/StPicoEvent/StPicoBTowHit.h"
 #include "StRoot/StPicoEvent/StPicoBEmcPidTraits.h"
 //MyAnalysisMaker includes
@@ -171,10 +171,11 @@ Int_t StMyAnalysisMaker::Make(){
             return kStOK;
         }
         ref16 = 15-centbin16; 
-        _Event->SetCentrality(5.0*ref16);
-        if((_Event->Centrality() < CentralityMin) || (_Event->Centrality() > CentralityMax)){
+        _Event->SetCentrality(ref16+1);
+        float cent_scaled = 2.5*(2*ref16 + 1);
+        if((cent_scaled < CentralityMin) || (cent_scaled > CentralityMax)){
             hEventStats->Fill(6);
-            return kStOK;
+            if(doCentSelection)return kStOK;
         }
 
         _Event->SetCorrectedRefmult(grefmultCorr->getRefMultCorr(_Event->gRefMult(), _Event->Vz(), _Event->ZDC_Coincidence(), 2));
@@ -187,13 +188,23 @@ Int_t StMyAnalysisMaker::Make(){
     _Event->SetBBCCoincidence(picoEvent->BBCx());
     _Event->SetVPDVz(picoEvent->vzVpd());
 
-    hEventStats->Fill(7);
-
     //RunOverEmcTriggers(); //Runs over all emc i.e., High tower (and Jet patch for pp) triggers... 
     _Event->ClearTrackArray();
     RunOverTracks(); //Runs over all tracks
     _Event->ClearTowerArray();
     RunOverTowers(); //Runs over all towers
+
+    if((TrackPtMax < JetConstituentMinPt) && (TowerEtMax < JetConstituentMinPt)){
+        hEventStats->Fill(7);
+        if(!doLowEnergyEvents)return kStOK;
+    }
+
+    if(TrackPtMax < MinTrackPtMax){
+        hEventStats->Fill(7);
+        if(!doLowEnergyEvents)return kStOK;
+    }
+
+    hEventStats->Fill(8);
 
     tree->Fill();
 
@@ -243,28 +254,28 @@ void StMyAnalysisMaker::RunOverTracks(){
         cout<<"Track array not cleared from previous event!"<<endl;
     }
 
-    for(int itrk = 0; itrk < picoDst->numberOfTracks(); itrk++){ //begin Track Loop...
+    for(unsigned int itrk = 0; itrk < picoDst->numberOfTracks(); itrk++){ //begin Track Loop...
         StPicoTrack *trk = static_cast<StPicoTrack*>(picoDst->track(itrk));
         if(!(trk->isPrimary())) continue; //Check if track is primary
         hTrackStats->Fill(0);
         //Track quality cuts...
         if(trk->gDCA(pVtx).Mag() > TrackDCAMax){hTrackStats->Fill(1); continue;}
         if(trk->nHitsFit() < TrackNHitsFitMin){hTrackStats->Fill(2); continue;} 
-        if(double(trk->nHitsFit()/trk->nHitsMax()) < TrackNHitsRatioMin){
+        if(float(trk->nHitsFit()/trk->nHitsMax()) < TrackNHitsRatioMin){
             hTrackStats->Fill(3); 
             continue;
         }
 
         TVector3 trkMom = trk->pMom();
-        double pt = trkMom.Pt();
-        double eta = trkMom.Eta();
+        float pt = trkMom.Pt();
+        float eta = trkMom.Eta();
 
         if(pt < TrackPtMin){hTrackStats->Fill(4); continue;} 
         if((eta < TrackEtaMin) || (eta > TrackEtaMax)){hTrackStats->Fill(5); continue;}
 
         if(pt > TrackPtMax) TrackPtMax = pt; 
 
-        double trackingEff = GetTrackingEfficiency(pt, eta, ref16, _Event->ZDC_Coincidence(), EfficiencyFile);
+        float trackingEff = GetTrackingEfficiency(pt, eta, ref16, _Event->ZDC_Coincidence(), EfficiencyFile);
 
         int MatchedTowerIndex = trk->bemcTowerIndex();
         if(MatchedTowerIndex >= 0){
@@ -275,18 +286,18 @@ void StMyAnalysisMaker::RunOverTracks(){
         hTrackStats->Fill(7);
 
         TStarTrack *_track = _Event->AddTrack();
-        _track->SetIndex(itrk);
+        _track->SetIndex(itrk+1);
         _track->SetCharge(trk->charge());
         _track->SetPxPyPz(trkMom);
         _track->SetTrackingEfficiency(trackingEff);
-        _track->SetMatchedTower(MatchedTowerIndex); 
+        _track->SetMatchedTower(MatchedTowerIndex+1); 
         _track->DoTrackPid(trk->nSigmaPion(), trk->nSigmaKaon(), 
                            trk->nSigmaProton(), trk->nSigmaElectron());       
 
         //if(!doJetAnalysis) continue;
         //if(_track.Pt < JetConstituentMinPt)continue;
         ////Put code to make precursor of vector<PseudoJet> here...
-        //double E = sqrt(trkMom.Mag2()+pi0mass*pi0mass);
+        //float E = sqrt(trkMom.Mag2()+pi0mass*pi0mass);
         //TracksForJetClustering[itrk] = make_pair(new TLorentzVector(trkMom, E), _track.Charge);   
    }
    _Event->SetMaxTrackPt(TrackPtMax);
@@ -299,9 +310,10 @@ void StMyAnalysisMaker::RunOverTowers(){
     if(_Event->Towers->GetEntriesFast() > 0){
         cout<<"Tower array not cleared from previous event!"<<endl;
     }
-    for(int itow = 0; itow < picoDst->numberOfBTowHits(); itow++){
+    for(unsigned int itow = 0; itow < picoDst->numberOfBTowHits(); itow++){
         StPicoBTowHit *tower = static_cast<StPicoBTowHit*>(picoDst->btowHit(itow));
         hTowerStats->Fill(0);
+        if(tower->isBad()){hTowerStats->Fill(1); continue;}
         if(badTowers.count(itow+1)>0){hTowerStats->Fill(1); continue;}
         if(deadTowers.count(itow+1)>0){hTowerStats->Fill(2); continue;}
         if(tower->energy() < TowerEnergyMin){hTowerStats->Fill(3); continue;}
@@ -314,20 +326,20 @@ void StMyAnalysisMaker::RunOverTowers(){
         }  
 
         //Start hardonic correction of tower...
-        double EnergyCorr = tower->energy();
+        float EnergyCorr = tower->energy();
 
         //if(!(TracksMatchedToTower[itow].empty()))
         //cout<<"Tower: "<<itow<<" "<<Eta<<" "<<Phi<<" "<<" "<<EnergyCorr<<" "<<TracksMatchedToTower[itow].size()<<endl;
         if((TypeOfHadCorr != HadronicCorrectionType::kNone) && !(TracksMatchedToTower[itow].empty())){
             //cout<<EnergyCorr<<" ";
-            double maxE = 0;
-            double sumE = 0;
+            float maxE = 0;
+            float sumE = 0;
             for(int itrk : TracksMatchedToTower[itow]){ 
                //cout<<itrk<<endl;
                StPicoTrack *trk = static_cast<StPicoTrack*>(picoDst->track(itrk));
                TVector3 trkMom = trk->pMom();
-               double p2 = trkMom.Mag2();
-               double E = sqrt(p2 + pi0mass*pi0mass);
+               float p2 = trkMom.Mag2();
+               float E = sqrt(p2 + pi0mass*pi0mass);
                if(E > maxE) maxE = E;
                sumE += E;
             }
@@ -340,13 +352,13 @@ void StMyAnalysisMaker::RunOverTowers(){
         }else{hTowerStats->Fill(5);}
 
         if(EnergyCorr < TowerEnergyMin){hTowerStats->Fill(6); continue;}
-        double towEt = EnergyCorr/cosh(towPos.Eta());
+        float towEt = EnergyCorr/cosh(towPos.Eta());
         if(towEt < TowerEnergyMin){hTowerStats->Fill(7); continue;}
 
         hTowerStats->Fill(8);
 
         TStarTower *_tower = _Event->AddTower();
-        _tower->SetIndex(itow);
+        _tower->SetIndex(itow+1);
         _tower->SetADC(tower->adc());
         _tower->SetE(EnergyCorr);
         _tower->SetRawE(tower->energy());
@@ -360,7 +372,7 @@ void StMyAnalysisMaker::RunOverTowers(){
         //if(!doJetAnalysis || !doFullJet) continue;
         //if(towEt < JetConstituentMinPt) continue;
         ////Put code to fill precursor of vector<PseudoJet> if doing full jets here...
-        //double towP = sqrt(EnergyCorr*EnergyCorr-pi0mass*pi0mass); 
+        //float towP = sqrt(EnergyCorr*EnergyCorr-pi0mass*pi0mass); 
         //towPos.SetMag(towP);
         //TowersForJetClustering[itow] = new TLorentzVector(towPos, EnergyCorr);
     }
@@ -384,7 +396,8 @@ void StMyAnalysisMaker::DeclareHistograms(){
     hEventStats->GetXaxis()->SetBinLabel(5, "not MB");
     hEventStats->GetXaxis()->SetBinLabel(6, "Centrality > 80");
     hEventStats->GetXaxis()->SetBinLabel(7, Form("%0.0f > Centrality > %0.2f", CentralityMin, CentralityMax));
-    hEventStats->GetXaxis()->SetBinLabel(8, "GOOD");
+    hEventStats->GetXaxis()->SetBinLabel(8, Form("MaxPt < %0.2f", JetConstituentMinPt));
+    hEventStats->GetXaxis()->SetBinLabel(9, "GOOD");
 
     hTrackStats = new TH1F("hTrackStats", "Track Statistics", 9, -0.5, 8.5);
     hTrackStats->Sumw2();
@@ -459,8 +472,8 @@ bool StMyAnalysisMaker::IsEventHT(HTTriggers type){
     return find_first_of(EventTriggers.begin(), EventTriggers.end(), TriggerIds.begin(), TriggerIds.end()) != EventTriggers.end(); 
 }
 
-double StMyAnalysisMaker::GetTrackingEfficiency(double x, double y, int cbin, double zdcx, TFile *infile){
-    double effBinContent = -99; // value to be extracted from histogram
+float StMyAnalysisMaker::GetTrackingEfficiency(float x, float y, int cbin, float zdcx, TFile *infile){
+    float effBinContent = -99; // value to be extracted from histogram
     const char *species =  "pion"; // FIXME
     int lumiBin = floor(zdcx/10000);
 
@@ -483,14 +496,14 @@ double StMyAnalysisMaker::GetTrackingEfficiency(double x, double y, int cbin, do
        if(x > 1.8) x = 1.8;  // for pt > 1.8 use value at 1.8
 
        histName = Form("hppRun12_PtEtaEfficiency_data_aacuts");
-       // changed from double to float
+       // changed from float to float
        TH2F *h = static_cast<TH2F*>(infile->Get(Form("%s", histName)));
        if(!h) cout<<"don't have requested histogram! "<<Form("%s", histName)<<endl;
        h->SetName(Form("%s", histName));
        // get efficiency 
        effBin        = h->FindBin(x, y); // pt, eta
        effBinContent = h->GetBinContent(effBin);
-       double effBinContentErr = h->GetBinError(effBin);
+       float effBinContentErr = h->GetBinError(effBin);
 
        // delete histo and close input file
        delete h;

@@ -12,7 +12,7 @@ TStarTrack::TStarTrack(){
 
 }
 
-TStarTrack::TStarTrack(int& i, short& ch, double& px, double& py, double& pz){
+TStarTrack::TStarTrack(unsigned int i, signed char ch, float px, float py, float pz){
     _Index = i;
     _Charge = ch;
     _Px = px;
@@ -20,7 +20,7 @@ TStarTrack::TStarTrack(int& i, short& ch, double& px, double& py, double& pz){
     _Pz = pz;
 }
 
-TStarTrack::TStarTrack(int& i, short& ch, TVector3& trkMom){
+TStarTrack::TStarTrack(unsigned int i, signed char ch, TVector3& trkMom){
     _Index = i;
     _Charge = ch;
     _Px = trkMom.Px();
@@ -32,14 +32,14 @@ TStarTrack::~TStarTrack(){
 
 }
 
-double TStarTrack::Phi(){
-   double phi = atan2(_Py, _Px);
+float TStarTrack::Phi(){
+   float phi = atan2(_Py, _Px);
    if(phi < 0.0) return phi+2.0*TMath::Pi();
    else if(phi > 2.0*TMath::Pi()) return phi-2.0*TMath::Pi();
    else return phi; 
 }
 
-void TStarTrack::DoTrackPid(double nsig_pi, double nsig_K, double nsig_p, double nsig_e){
+void TStarTrack::DoTrackPid(float nsig_pi, float nsig_K, float nsig_p, float nsig_e){
     if(abs(nsig_pi) < 2)_IsPion = true; 
     if(abs(nsig_K) < 2) _IsKaon = true; 
     if(abs(nsig_p) < 2) _IsProton = true; 

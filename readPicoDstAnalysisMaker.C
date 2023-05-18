@@ -53,7 +53,7 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
     
       bool useEmcPidTraits = false;
       bool doEmbedding = false;
-      bool makeJetTree = true;
+      bool makeJetTree = false;
 
       // create chain to take in makers
       StChain* chain = new StChain();
@@ -65,7 +65,7 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
         picoMaker->SetStatus("*", 0);
         picoMaker->SetStatus("Event", 1);
         picoMaker->SetStatus("Track", 1);
-        picoMaker->SetStatus("EmcTrigger", 1);
+        //picoMaker->SetStatus("EmcTrigger", 1);
         picoMaker->SetStatus("BTowHit", 1);
         if(useEmcPidTraits) picoMaker->SetStatus("EmcPidTraits", 1);
       if(doEmbedding){ 
@@ -85,7 +85,9 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
       anaMaker->SetdoHTEventsOnly(true);
       anaMaker->SetdoMBEventsOnly(false);
       anaMaker->SetdoCentralitySelection(false);
-      anaMaker->SetAbsZVtxMax(40);
+      anaMaker->SetJetConstituentMinPt(2.0);
+      anaMaker->SetdoLowEnergyEvents(false);
+      anaMaker->SetAbsZVtxMax(30);
 
       anaMaker->SetTrackPtMin(0.2);
       anaMaker->SetTrackEtaMin(-1.0);
@@ -93,6 +95,7 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
       anaMaker->SetTrackDCAMax(3.0);
       anaMaker->SetTrackNHitsFitMin(15);
       anaMaker->SetTrackNHitsRatioMin(0.52);
+      anaMaker->SetMinTrackPtMax(1.0);
 
       anaMaker->SetTowerEtaMin(-1.0);
       anaMaker->SetTowerEtaMax(1.0);
@@ -140,7 +143,10 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
 
   // close output file if open
   if(fout->IsOpen())   fout->Close();
-  if(fjetout != NULL && fjetout->IsOpen())   fjetout->Close();
+
+  if(fjetout != NULL){
+    if(fjetout->IsOpen())fjetout->Close();
+  }  
 
   //StMemStat::PrintMem("load StChain");
 }
