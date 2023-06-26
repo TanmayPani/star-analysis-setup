@@ -1,62 +1,41 @@
 #ifndef TStarTrack_h
 #define TStarTrack_h
 
-#include "TObject.h"
-#include "TMath.h"
-#include "TVector3.h"
+#include "TStarVector.h"
 
-class TStarTrack : public TObject{
+class TVector3;
+
+class TStarTrack : public TStarVector{
 public:
     TStarTrack();
-    TStarTrack(unsigned int i, signed char ch, float px, float py, float pz);
-    TStarTrack(unsigned int i, signed char ch, TVector3& t);
-
+    TStarTrack(unsigned int _i, short _ch, double _pt, double _eta, double _phi, double _m);
+    TStarTrack(unsigned int i, short ch, TVector3& t, double m);
+    TStarTrack(const TStarTrack& t);
     virtual ~TStarTrack();
 
-    float Px() {return _Px;}
-    float Py() {return _Py;}
-    float Pz() {return _Pz;}
-    signed char Charge() {return _Charge;}
-    unsigned int Index() {return _Index;}
-    unsigned int MatchedTower() {return _MatchedTowerIndex;}
-    float TrackingEfficiency() {return _trackingEff;}
+    signed char charge() {return _Charge;}
+    unsigned int index() {return _Index;}
+    unsigned int matchedTower() {return _MatchedTowerIndex;}
+    double trackingEfficiency() {return _trackingEff;}
 
-    float P()  {return std::sqrt(_Px*_Px + _Py*_Py + _Pz*_Pz);}
-    float Pt() {return std::sqrt(_Px*_Px + _Py*_Py);}
-    float Theta() {return std::atan2(std::sqrt(_Px*_Px + _Py*_Py), abs(_Pz));}
-    float Eta() {return -1.0*std::log(std::tan(0.5*Theta()));}
-    float Phi();// \phi \in [0, 2\pi]
-    float Phi_Std(){return std::atan2(_Py, _Px);} // \phi \in [-\pi, \pi]
+    void setIndex(unsigned int i) {_Index = i;}
+    void setCharge(signed char ch) {_Charge = ch;}
+    void setMatchedTower(unsigned int i) {_MatchedTowerIndex = i;}
+    void setTrackingEfficiency(double eff) {_trackingEff = eff;}
+    void setTrackVector(double _pt, double _eta, double _phi, double _m){setPtEtaPhiM(_pt, _eta, _phi, _m);}
+    void setNSigmas(double nSPion, double nSKaon, double nSProton, double nSElectron){_nSigmaPion = nSPion; _nSigmaKaon = nSKaon; _nSigmaProton = nSProton; _nSigmaElectron = nSElectron;}
 
-    float pi0mass = 0.13957;
-    float Pi0E() {return std::sqrt(_Px*_Px + _Py*_Py + _Pz*_Pz + pi0mass*pi0mass);}
-    float GetE(float mass) {return std::sqrt(_Px*_Px + _Py*_Py + _Pz*_Pz + mass*mass);} 
-
-    void DoTrackPid(float _pi, float _k, float _p, float _e);
-
-    void SetPx(float p) {_Px = p;}
-    void SetPy(float p) {_Py = p;}
-    void SetPz(float p) {_Pz = p;}
-    void SetPxPyPz(float px, float py, float pz){_Px = px; _Py = py; _Pz = pz;}
-    void SetPxPyPz(TVector3& p){_Px = p.Px(); _Py = p.Py(); _Pz = p.Pz();}
-    void SetIndex(unsigned int i) {_Index = i;}
-    void SetCharge(signed char ch) {_Charge = ch;}
-    void SetMatchedTower(unsigned int i) {_MatchedTowerIndex = i;}
-    void SetTrackingEfficiency(float eff) {_trackingEff = eff;}
+    virtual void print();
 
     unsigned int _Index = 0;
-    signed char _Charge = -99;
-    float _Px = 0;
-    float _Py = 0;
-    float _Pz = 0;
-
-    float _trackingEff = 0;
+    short _Charge = -99;
+    double _trackingEff = 0;
     unsigned int _MatchedTowerIndex = 0;
 
-    bool _IsPion = false;
-    bool _IsKaon = false;
-    bool _IsProton = false;
-    bool _IsElectron = false;
+    double _nSigmaPion = 0; //!
+    double _nSigmaKaon = 0; //!
+    double _nSigmaProton = 0; //!
+    double _nSigmaElectron = 0; //!
 
     ClassDef(TStarTrack, 1)
 };

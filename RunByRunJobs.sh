@@ -7,7 +7,7 @@ echo "running aklog: "
 eval aklog
 echo "###############################################################################################"
 
-OUTDIR="/gpfs01/star/pwg/tpani/output/PicosToTree"
+OUTDIR="/gpfs01/star/pwg/tpani/output/PicosToTree2"
 mkdir -p $OUTDIR
 
 MYJOBNAME=$(date +%Y%m%d)
@@ -38,18 +38,19 @@ while read RUNNUMBER && [ $ITERATION -lt 1000 ]; do #Set to some really big numb
 
 	ITERATION=$((ITERATION+1))
 
-	mkdir -p $OUTDIR/$JOBUSERNAME/$RUNNUMBER
-	mkdir -p $OUTDIR/$JOBUSERNAME/$RUNNUMBER/gen
-	mkdir -p $OUTDIR/$JOBUSERNAME/$RUNNUMBER/log
-	mkdir -p $OUTDIR/$JOBUSERNAME/$RUNNUMBER/out 
-	mkdir -p $OUTDIR/$JOBUSERNAME/$RUNNUMBER/out/EventTrees
-	mkdir -p $OUTDIR/$JOBUSERNAME/$RUNNUMBER/out/JetTrees 
+	#mkdir -p $OUTDIR/$JOBUSERNAME/$RUNNUMBER
+	mkdir -p $OUTDIR/$JOBUSERNAME/gen
+	mkdir -p $OUTDIR/$JOBUSERNAME/log
+	mkdir -p $OUTDIR/$JOBUSERNAME/out 
+	mkdir -p $OUTDIR/$JOBUSERNAME/out/EventTrees
+	mkdir -p $OUTDIR/$JOBUSERNAME/out/Histograms
+	#mkdir -p $OUTDIR/$JOBUSERNAME/out/JetTrees 
 
 	XMLSCRIPT="JOBXML_FILES/$JOBUSERNAME/SubmitJobs_$RUNNUMBER.xml"
 
 cat> "$XMLSCRIPT" <<EOL
 <?xml version="1.0" encoding="utf-8" ?> 
-<job  name="${MYJOBNAME}_${RUNNUMBER}_" maxFilesPerProcess="$NMAXPROCESSFILES" fileListSyntax="xrootd" simulateSubmission="$SIMULATE" >
+<job  name="D${MYJOBNAME}_R${RUNNUMBER}_" maxFilesPerProcess="$NMAXPROCESSFILES" fileListSyntax="xrootd" simulateSubmission="$SIMULATE" >
 
 	<input URL="catalog:star.bnl.gov?production=$PROD,\
 library=$LIB,\
@@ -58,12 +59,12 @@ filetype=daq_reco_picoDst,sname2=st_physics,\
 runnumber=$RUNNUMBER,\
 storage!=hpss" nFiles="$NFILES" />
 
-	<stdout URL="file:$OUTDIR/$JOBUSERNAME/$RUNNUMBER/log/${RUNNUMBER}_\$JOBINDEX.log" />
-	<stderr URL="file:$OUTDIR/$JOBUSERNAME/$RUNNUMBER/log/${RUNNUMBER}_\$JOBINDEX.err" />
-	<output fromScratch="EventTree_${RUNNUMBER}_\$JOBINDEX.root" toURL="file:$OUTDIR/$JOBUSERNAME/$RUNNUMBER/out/EventTrees/" /> 
-	<output fromScratch="JetTree_${RUNNUMBER}_\$JOBINDEX.root" toURL="file:$OUTDIR/$JOBUSERNAME/$RUNNUMBER/out/JetTrees/" /> 
+	<stdout URL="file:$OUTDIR/$JOBUSERNAME/log/${RUNNUMBER}_\$JOBINDEX.log" />
+	<stderr URL="file:$OUTDIR/$JOBUSERNAME/log/${RUNNUMBER}_\$JOBINDEX.err" />
+	<output fromScratch="EventTree_${RUNNUMBER}_\$JOBINDEX.root" toURL="file:$OUTDIR/$JOBUSERNAME/out/EventTrees/" /> 
+	<output fromScratch="Histograms_${RUNNUMBER}_\$JOBINDEX.root" toURL="file:$OUTDIR/$JOBUSERNAME/out/Histograms/" /> 
 	<Generator> 
-		<Location>$OUTDIR/$JOBUSERNAME/$RUNNUMBER/gen/</Location> 
+		<Location>$OUTDIR/$JOBUSERNAME/gen/</Location> 
 	</Generator>
 
     <SandBox>
@@ -92,6 +93,6 @@ EOL
 	star-submit $XMLSCRIPT
 done < $RUNLIST
 
-#rm -r *.dataset *.session.xml
+rm -r *.dataset *.session.xml
 
 #bash concheck.sh $myDate $BNLusername

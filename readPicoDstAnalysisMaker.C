@@ -46,7 +46,6 @@ void LoadLibs(){
   gSystem->ListLibraries();
 } 
 
-
 void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.list", string outputFile="test.root", int nEvents = 10000){
       // Load necessary libraries and macros
       LoadLibs();
@@ -77,30 +76,33 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
       TFile *fout = new TFile(eventOutputFile.c_str(), "RECREATE");
       fout->Close();
 
-      StMyAnalysisMaker *anaMaker = new StMyAnalysisMaker("StMyAnalysisMaker", eventOutputFile);
-      anaMaker->SetRunFlag(StMyAnalysisMaker::RunFlags::kRun14);
-      anaMaker->SetdoppAnalysis(false);
-      anaMaker->SetdoRunbyRun(true);
+      string histoOutputFile = "Histograms_"+outputFile;
+      TFile *histOut = new TFile(histoOutputFile.c_str(), "RECREATE");
+      histOut->Close();
 
-      anaMaker->SetdoHTEventsOnly(true);
-      anaMaker->SetdoMBEventsOnly(false);
-      anaMaker->SetdoCentralitySelection(false);
-      anaMaker->SetJetConstituentMinPt(2.0);
-      anaMaker->SetdoLowEnergyEvents(false);
-      anaMaker->SetAbsZVtxMax(30);
 
-      anaMaker->SetTrackPtMin(0.2);
-      anaMaker->SetTrackEtaMin(-1.0);
-      anaMaker->SetTrackEtaMax(1.0);
-      anaMaker->SetTrackDCAMax(3.0);
-      anaMaker->SetTrackNHitsFitMin(15);
-      anaMaker->SetTrackNHitsRatioMin(0.52);
-      anaMaker->SetMinTrackPtMax(1.0);
+      StMyAnalysisMaker *anaMaker = new StMyAnalysisMaker("StMyAnalysisMaker", outputFile);
+      anaMaker->setRunFlag(StMyAnalysisMaker::RunFlags::kRun14);
+      anaMaker->setdoppAnalysis(false);
+      anaMaker->setdoRunbyRun(true);
+      anaMaker->setSelectHTEventsOnly(true);
+   
+      anaMaker->setJetConstituentMinPt(2.0);
+      anaMaker->setAbsZVtxMax(30);
+      anaMaker->setExcludeLowEnergyEvents(true);
+      anaMaker->setMinTrackPtMax(1.0);
+  
+      anaMaker->setTrackDCAMax(3.0);
+      anaMaker->setTrackNHitsFitMin(15);
+      anaMaker->setTrackNHitsRatioMin(0.52);
+      anaMaker->setTrackPtMin(0.2);
+      anaMaker->setTrackEtaMin(-1.0);
+      anaMaker->setTrackEtaMax(1.0);
 
-      anaMaker->SetTowerEtaMin(-1.0);
-      anaMaker->SetTowerEtaMax(1.0);
-      anaMaker->SetTowerEnergyMin(0.2);
-      anaMaker->SetTowerHadronicCorrType(StMyAnalysisMaker::HadronicCorrectionType::kFull);
+      anaMaker->setTowerEtaMin(-1.0);
+      anaMaker->setTowerEtaMax(1.0);
+      anaMaker->setTowerEnergyMin(0.2);
+      anaMaker->setTowerHadronicCorrType(StMyAnalysisMaker::HadronicCorrectionType::kFull);
 
       TFile *fjetout = NULL;
   
@@ -142,7 +144,8 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/testing_Temp.l
 	delete chain;	
 
   // close output file if open
-  if(fout->IsOpen())   fout->Close();
+  if(fout->IsOpen())    fout->Close();
+  if(histOut->IsOpen()) histOut->Close();
 
   if(fjetout != NULL){
     if(fjetout->IsOpen())fjetout->Close();

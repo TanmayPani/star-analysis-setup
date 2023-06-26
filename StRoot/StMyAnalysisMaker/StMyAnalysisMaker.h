@@ -4,6 +4,7 @@
 #include "StMaker.h"
 
 //C++ includes
+#include <map>
 #include <set>
 #include <vector>
 
@@ -15,20 +16,22 @@ class StEmcPosition2;
 class StPicoDstMaker;
 class StPicoDst;
 class StPicoEvent;
+class StPicoTrack;
+class StPicoBTowHit;
 class TStarEvent;
 //class TTree;
 class TFile;
 class TH1F;
+class TH2F;
 
 class StMyAnalysisMaker : public StMaker {
 public:
-    StMyAnalysisMaker(string name, string output);
+    StMyAnalysisMaker(string name, string output, bool dodebug = false);
     virtual ~StMyAnalysisMaker();
 
     enum HadronicCorrectionType{kNone = 0, kHighestMatchedTrackE = 1, kFull = 2};
     enum RunFlags{kRun12 = 12, kRun14 = 14};
-    enum MBTriggers{kVPDMB, kVPDMB_extra, kVPDMB5, kVPDMB30, kVPDMB30_extra};
-    enum HTTriggers{kHT0, kHT1, kHT2, kHT3};
+    //enum Triggers{kVPDMB = 100, kVPDMB5 = 105, kVPDMB30 = 130, kHT1 = 201, kHT1xVPDMB30 = 131, kHT2 = 202, kHT2xVPDMB30 = 132, kHT3 = 203};
 
     // class required functions
     virtual Int_t Init();
@@ -36,76 +39,82 @@ public:
     //virtual Int_t Clear();
     virtual Int_t Finish();
 
-    void SetRunFlag(RunFlags run){Run_Flag = run;}
-    void SetZVtxRange(float min, float max){ZVtx_Min = min; ZVtx_Max = max;}
-    void SetAbsZVtxMax(float z){AbsZVtx_Max = z;}
-    void SetCentralityRange(int min, int max){CentralityMin = min; CentralityMax = max;}
+    void setRunFlag(RunFlags run){runFlag = run;}
+    void setdoppAnalysis(bool b){doppAnalysis = b;}
+    void setdoRunbyRun(bool b){doRunbyRun = b;}
+    void setZVtxRange(double min, double max){zVtx_Min = min; zVtx_Max = max;}
+    void setAbsZVtxMax(double z){absZVtx_Max = z;}
 
-    void SetdoppAnalysis(bool b){doppAnalysis = b;}
-    void SetdoRunbyRun(bool b){doRunbyRun = b;}
-    void SetdoHTEventsOnly(bool b){doHTEventsOnly = b;}
-    void SetdoMBEventsOnly(bool b){doMBEventsOnly = b;}
-    void SetdoCentralitySelection(bool b){doCentSelection = b;}
-    void SetdoLowEnergyEvents(bool b){doLowEnergyEvents = b;}
-//    void SetdoJetAnalysis(bool b) {doJetAnalysis = b;}
-//    void SetdoFullJets(bool b){doFullJet = b;}
+    //void addTriggerToStore(unsigned char t){triggersToStore.push_back(t);}
 
-    void SetTrackPtMin(float m){TrackPtMin = m;}
-    void SetTrackPtMax(float m){TrackPtMax = m;}
-    void SetTrackEtaMin(float m){TrackEtaMin = m;}
-    void SetTrackEtaMax(float m){TrackEtaMax = m;}
-    void SetTrackDCAMax(float m){TrackDCAMax = m;}
-    void SetTrackNHitsFitMin(float m){TrackNHitsFitMin = m;}
-    void SetTrackNHitsRatioMin(float m){TrackNHitsRatioMin = m;}
-    void SetMinTrackPtMax(float m){MinTrackPtMax = m;}
+    void setCentralityRange(int min, int max){centralityMin = min; centralityMax = max; doCentSelection = true;}
+    void setExcludeLowEnergyEvents(bool b){excludeLowEnergyEvents = b;}
+    void setSelectHTEventsOnly(bool b){doSelectHTEventsOnly = b;}
 
-    void SetTowerEnergyMin(float m){TowerEnergyMin = m;}
-    void SetTowerEtaMin(float m) {TowerEtaMin = m;}
-    void SetTowerEtaMax(float m) {TowerEtaMax = m;}
-    void SetTowerHadronicCorrType(HadronicCorrectionType t){TypeOfHadCorr = t;}
-    void SetJetConstituentMinPt(float pt){JetConstituentMinPt = pt;}
+    void setTrackPtMin(double m)        {trackPtMin = m;}
+    void setTrackPtMax(double m)        {trackPtMax = m;}
+    void setTrackEtaMin(double m)       {trackEtaMin = m;}
+    void setTrackEtaMax(double m)       {trackEtaMax = m;}
+    void setTrackDCAMax(double m)       {trackDCAMax = m;}
+    void setTrackNHitsFitMin(double m)  {trackNHitsFitMin = m;}
+    void setTrackNHitsRatioMin(double m){trackNHitsRatioMin = m;}
+    void setMinTrackPtMax(double m)     {minTrackPtMax = m; excludeLowChargedEnergyEvents = true;}
+
+    void setTowerEnergyMin(double m){towerEnergyMin = m;}
+    void setTowerEtaMin(double m)   {towerEtaMin = m;}
+    void setTowerEtaMax(double m)   {towerEtaMax = m;}
+    void setTowerHadronicCorrType(HadronicCorrectionType t){hadronicCorrType = t;}
+    void setJetConstituentMinPt(double pt){jetConstituentMinPt = pt;}
 
     //Output Methods...
-    TStarEvent* GetEvent(){return _Event;}
+    TStarEvent* getEvent(){return tsEvent;}
 
 private:
-    float pi0mass = 0.13957;
-    // bad and dead tower list functions and arrays
+    double pi0mass = 0.13957;
+    // bad and dead tower list arrays
     std::set<int>        badTowers;
     std::set<int>        deadTowers;
     // bad run list 
     std::set<int>        badRuns;
 
     //Various functions to initialize stuff in Init()...
-    void SetUpBadRuns();
-    void SetUpBadTowers();
-    void SetUpDeadTowers();
-    void DeclareHistograms();
-    void WriteHistograms();
+    void setUpBadRuns();
+    void setUpBadTowers();
+    void setUpDeadTowers();
+    void declareHistograms();
+    void writeHistograms();
 
     //To check event for triggers...
-    bool IsEventMB(MBTriggers mbtype);
-    bool IsEventHT(HTTriggers httype);
-    float GetTrackingEfficiency(float pt, float eta, int centbin, float zdcx, TFile *infile);
+    double getTrackingEfficiency(double pt, double eta, int centbin, double zdcx, TFile *infile);
+
+    //To set centrality related info...
+    bool runStRefMultCorr();
 
     //Utility functions to run over tracks and towers
     //void RunOverEmcTriggers();
-    void RunOverTracks();
-    void RunOverTowers();
-    void RunOverTowerClusters(); 
+    void runOverTracks();
+    void runOverTowers();
+    //void runOverTowerClusters(); 
 
-    void BookTree();
+    void bookTree();
 
-    RunFlags Run_Flag = RunFlags::kRun14;
-    HadronicCorrectionType TypeOfHadCorr = HadronicCorrectionType::kFull;
+    bool isTrackGood(StPicoTrack *track);
+    bool isTowerGood(unsigned int itow, StPicoBTowHit *tower);
+
+    void printPicoEvent();
+
+    RunFlags runFlag = RunFlags::kRun14;
+    HadronicCorrectionType hadronicCorrType = HadronicCorrectionType::kFull;
 
     //TFile Object that will contain the .root file containing efficiency histograms
-    TFile *EfficiencyFile = nullptr;
+    TFile *efficiencyFile = nullptr;
+
 
     //Need these to Set StMaker name, and get required objects from *.PicoDst.root files...
-    std::string AnaName = "";
-    std::string OutputFileName = "";
-    StPicoDstMaker *picoDst_Maker = nullptr;
+    std::string anaName = "";
+    std::string outputFileName = "";
+    std::string histoFileName = "";
+    StPicoDstMaker *picoDstMaker = nullptr;
     StPicoDst *picoDst = nullptr;
     StPicoEvent *picoEvent = nullptr;
 
@@ -115,76 +124,80 @@ private:
 
     //Points to modified StEmcPosition class instance to 
     //get position vectors of towers given a primary vertex...
-    StEmcPosition2 *EmcPosition = nullptr;
+    StEmcPosition2 *emcPosition = nullptr;
 
     //Boolean flags to toggle functionalities
+    bool doDebug = false;
     bool doppAnalysis = false;
     bool doRunbyRun = false;
-    bool doHTEventsOnly = true;
-    bool doMBEventsOnly = false;
+    bool doSelectHTEventsOnly = false;
+    //bool doSelectForMBEvents = false;
     bool doCentSelection = false;
-    bool doLowEnergyEvents = false;
+    bool excludeLowEnergyEvents = false;
+    bool excludeLowChargedEnergyEvents = false;
 //    bool doJetAnalysis = false;
 //    bool doFullJet = false;
 
     //Event quality cuts
-    float ZVtx_Min = -40.0;
-    float ZVtx_Max = 40.0;
-    float AbsZVtx_Max = 40.0;
+    double zVtx_Min = -40.0;
+    double zVtx_Max = 40.0;
+    double absZVtx_Max = 40.0;
 
     //Event analysis cuts
-    float CentralityMin = 0;
-    float CentralityMax = 10; 
+    double centralityMin = 0;
+    double centralityMax = 10; 
 
     //Track quality cuts
-    float TrackPtMin = 0.2;
-    float TrackEtaMin = -1.0;
-    float TrackEtaMax = 1.0;
-    float TrackDCAMax = 3.0;
-    float TrackNHitsFitMin = 15;
-    float TrackNHitsRatioMin = 0.52;
-    float MinTrackPtMax = 1.0;
+    double trackPtMin = 0.2;
+    double trackPtMax = 30.0;
+    double trackEtaMin = -1.0;
+    double trackEtaMax = 1.0;
+    double trackDCAMax = 3.0;
+    double trackNHitsFitMin = 15;
+    double trackNHitsRatioMin = 0.52;
+    double minTrackPtMax = 1.0;
 
     //Tower quality cuts
-    float TowerEtaMin = -1.0;
-    float TowerEtaMax = 1.0;
-    float TowerEnergyMin = 0.2;
+    double towerEtaMin = -1.0;
+    double towerEtaMax = 1.0;
+    double towerEnergyMin = 0.2;
 
     //2-D vector containing all tracks matched to tower
-    //std::vector<std::vector<bool>> HighTowerStatus;
-    std::vector<std::vector<int>> TracksMatchedToTower;  
+    std::vector<double>        towerHadCorrSumTrE ;  
+    std::vector<double>        towerHadCorrMaxTrE ;
+    std::vector<unsigned int> towerNTracksMatched;  
 
-    float TrackPtMax = 0;
-    float TowerEtMax = 0;
+    double maxTrackPt = 0;
+    double maxTowerEt = 0;
 
     //Jet Analysis cuts
-    float JetConstituentMinPt = 2.0;
+    double jetConstituentMinPt = 2.0;
 
-    TFile *fout = nullptr;
+    TFile *treeOut = nullptr;
+    TFile *histOut = nullptr;
+
     TTree *tree = nullptr; 
 
-    std::vector<unsigned int> EventTriggers;
-
-    unsigned int RunID = 0;
-    unsigned int EventID = 0;
-
-    int centbin9 = -99;
-    int centbin16 = -99;
-    int ref9 = -99;
-    int ref16 = -99;
+    unsigned int runID = 0;
+    unsigned int eventID = 0;
 
     TVector3 pVtx;
 
-    TStarEvent *_Event = nullptr;
+    int centbin9 = -99;
+    int centbin16 = -99;
+    int centscaled = -99;
+    int ref9 = -99;
+    int ref16 = -99;
+    double Wt = 1.0;
 
-protected:
+    std::vector<unsigned int> eventTriggers;
 
-    TH1F *hEventStats = nullptr;
-    TH1F *hTrackStats = nullptr;
-    TH1F *hTowerStats = nullptr;
- 
-    ClassDef(StMyAnalysisMaker, 2)
+    TStarEvent *tsEvent = nullptr;
+
+    std::map<std::string, TH1F*> histos1D;
+    std::map<std::string, TH2F*> histos2D;
+
+    ClassDef(StMyAnalysisMaker, 1)
 };
-
 
 #endif

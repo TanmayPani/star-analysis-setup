@@ -1,4 +1,4 @@
-/* This was generated for version 'SL23b' */
+/* This was generated for version 'SL23d' */
 #pragma link off all globals;
 #pragma link off all classes;
 #pragma link off all functions;
@@ -9,4 +9,5 @@
 #pragma link C++ class TStarJetEvent+;
 #pragma link C++ class TStarTower+;
 #pragma link C++ class TStarTrack+;
+#pragma link C++ class TStarVector+;
 #endif

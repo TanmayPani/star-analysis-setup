@@ -1,8 +1,9 @@
 #define TStarTrack_cxx
 
 #include "TStarTrack.h"
-
 #include "TVector3.h"
+
+#include <iostream>
 
 ClassImp(TStarTrack);
 
@@ -12,39 +13,38 @@ TStarTrack::TStarTrack(){
 
 }
 
-TStarTrack::TStarTrack(unsigned int i, signed char ch, float px, float py, float pz){
-    _Index = i;
-    _Charge = ch;
-    _Px = px;
-    _Py = py;
-    _Pz = pz;
+TStarTrack::TStarTrack(unsigned int _i, short _ch, double _pt, double _eta, double _phi, double _m) : 
+TStarVector(_pt, _eta, _phi, sqrt(p2() + _m * _m)){
+    _Index = _i;
+    _Charge = _ch;
 }
 
-TStarTrack::TStarTrack(unsigned int i, signed char ch, TVector3& trkMom){
+TStarTrack::TStarTrack(unsigned int i, short ch, TVector3& trkMom, double m) : 
+TStarVector(trkMom, sqrt(trkMom.Mag2() + m * m)){
     _Index = i;
     _Charge = ch;
-    _Px = trkMom.Px();
-    _Py = trkMom.Py();
-    _Pz = trkMom.Pz();
+}
+
+TStarTrack::TStarTrack(const TStarTrack& t) : TStarVector(t){
+    _Index = t._Index;
+    _Charge = t._Charge;
+    _trackingEff = t._trackingEff;
+    _MatchedTowerIndex = t._MatchedTowerIndex;
+    _nSigmaPion = t._nSigmaPion;
+    _nSigmaKaon = t._nSigmaKaon;
+    _nSigmaProton = t._nSigmaProton;
+    _nSigmaElectron = t._nSigmaElectron;
 }
 
 TStarTrack::~TStarTrack(){
-
+    
 }
 
-float TStarTrack::Phi(){
-   float phi = atan2(_Py, _Px);
-   if(phi < 0.0) return phi+2.0*TMath::Pi();
-   else if(phi > 2.0*TMath::Pi()) return phi-2.0*TMath::Pi();
-   else return phi; 
+void TStarTrack::print(){
+    cout << "TStarTrack: " << endl;
+    cout <<"Index: " << _Index <<" Charge: " << _Charge << endl;
+    cout << "Tracking Efficiency: " << _trackingEff<< " Matched Tower Index: " << _MatchedTowerIndex << endl;
+    cout << "nSigmaPion: " << _nSigmaPion << " nSigmaKaon: " << _nSigmaKaon <<" nSigmaProton: " << _nSigmaProton <<" nSigmaElectron: " << _nSigmaElectron << endl;
+    TStarVector::print();
 }
-
-void TStarTrack::DoTrackPid(float nsig_pi, float nsig_K, float nsig_p, float nsig_e){
-    if(abs(nsig_pi) < 2)_IsPion = true; 
-    if(abs(nsig_K) < 2) _IsKaon = true; 
-    if(abs(nsig_p) < 2) _IsProton = true; 
-    if(abs(nsig_e) < 2) _IsElectron = true; 
-}
-
-
 

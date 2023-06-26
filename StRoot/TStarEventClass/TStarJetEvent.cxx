@@ -1,13 +1,8 @@
 #define TStarJetEvent_cxx
 
-#include "FJ_includes.h"
-
 #include "TStarJetEvent.h"
 #include "TStarJet.h"
-#include "TStarEvent.h"
 #include "TClonesArray.h"
-
-using namespace fastjet;
 
 using namespace std;
 
@@ -15,16 +10,22 @@ TStarJetEvent::TStarJetEvent(){
     Jets = new TClonesArray("TStarJet", 50);
 }
 
-TStarJetEvent::TStarJetEvent(int runid, int eventid){
-    _RunID = runid;
-    _EventID = eventid;
+TStarJetEvent::TStarJetEvent(float rho, float sigma, int njets) {
+    _Rho = rho;
+    _Sigma = sigma;
+    _NJets = njets;
     Jets = new TClonesArray("TStarJet", 50);
 }
 
-TStarJetEvent::TStarJetEvent(TStarEvent *Ev){
-    _RunID = Ev->RunNumber();
-    _EventID = Ev->EventNumber();
+TStarJetEvent::TStarJetEvent(const TStarJetEvent& je) {
+    _Rho = je._Rho;
+    _Sigma = je._Sigma;
+    _NJets = je._NJets;
     Jets = new TClonesArray("TStarJet", 50);
+    for(int i = 0; i < je.Jets->GetEntriesFast(); ++i){
+        TStarJet* _jet = static_cast<TStarJet*>(je.Jets->At(i));
+        new((*Jets)[i]) TStarJet(*_jet);
+    }
 }
 
 TStarJetEvent::~TStarJetEvent(){
@@ -33,15 +34,17 @@ TStarJetEvent::~TStarJetEvent(){
     }
 }
 
-TStarJet* TStarJetEvent::AddJet(PseudoJet& _jet){
-    if(_jet.is_pure_ghost())return nullptr;
+TStarJet* TStarJetEvent::addJet(){
     int index = Jets->GetEntriesFast();
     TStarJet* jet = static_cast<TStarJet*>(Jets->ConstructedAt(index));
-    jet->SetJet(_jet);
     return jet;
 }
 
-void TStarJetEvent::ClearJetArray(){
+void TStarJetEvent::addJet(const TStarJet& j){
+    new((*Jets)[Jets->GetEntriesFast()]) TStarJet(j);
+}
+
+void TStarJetEvent::clearJetArray(){
     Jets->Clear();
 }
 

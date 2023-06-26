@@ -1,6 +1,6 @@
 #include "StMyJetMaker.h"
 //FastJet stuff
-#include "StRoot/TStarEventClass/FJ_includes.h"
+#include "FJ_includes.h"
 //ROOT includes
 #include "TClonesArray.h"
 #include "TTree.h"
@@ -14,9 +14,9 @@
 #include "StRoot/TStarEventClass/TStarTrack.h"
 #include "StRoot/TStarEventClass/TStarTower.h"
 
-using namespace std;
-
 using namespace fastjet;
+
+using namespace std;
 
 ClassImp(StMyJetMaker);
 
@@ -73,36 +73,38 @@ Int_t StMyJetMaker::Make(){
 
     anaMaker = static_cast<StMyAnalysisMaker*>(GetMaker(Analysis.c_str()));
    
-    myEvent = static_cast<TStarEvent*>(anaMaker->GetEvent()); 
+    myEvent = static_cast<TStarEvent*>(anaMaker->getEvent()); 
 
-    if(!myEvent->IsHT())return kStOK;
+    //_JetEvent->SetEvent(*myEvent);
+
+    //if(!myEvent->IsHT())return kStOK;
 
     vector<PseudoJet> full_event;
     vector<PseudoJet> jet_constituents;
 
-    _Tracks = static_cast<TClonesArray*>(myEvent->GetTracks());
+    _Tracks = static_cast<TClonesArray*>(myEvent->getTracks());
 
     for(int itrk = 0; itrk < _Tracks->GetEntriesFast(); itrk++){
         TStarTrack *_track = static_cast<TStarTrack*>(_Tracks->At(itrk)); 
 
-        full_event.push_back(PseudoJet(_track->Px(), _track->Py(), _track->Pz(), _track->Pi0E()));
+        full_event.push_back(PseudoJet(*_track));
 
-        if(_track->Pt() < JetConstituentMinPt)continue;  
-        PseudoJet constit(_track->Px(), _track->Py(), _track->Pz(), _track->Pi0E());
-        constit.set_user_info(new StJetUserInfo(_track->Index(), _track->Charge()));
+        if(_track->pt() < JetConstituentMinPt)continue;  
+        PseudoJet constit(*_track);
+        constit.set_user_info(new StJetUserInfo(_track->index(), _track->charge()));
         jet_constituents.push_back(move(constit));
     }
 
-    _Towers = static_cast<TClonesArray*>(myEvent->GetTowers());
+    _Towers = static_cast<TClonesArray*>(myEvent->getTowers());
 
     for(int itow = 0; itow < _Towers->GetEntriesFast(); itow++){
         TStarTower *_tower = static_cast<TStarTower*>(_Towers->At(itow));
 
-        full_event.push_back(PseudoJet(_tower->Px(), _tower->Py(), _tower->Pz(), _tower->E()));
+        full_event.push_back(PseudoJet(*_tower));
 
-        if(_tower->Pt() < JetConstituentMinPt)continue;
-        PseudoJet constit(_tower->Px(), _tower->Py(), _tower->Pz(), _tower->E());
-        constit.set_user_info(new StJetUserInfo(_tower->Index(), 0));
+        if(_tower->et() < JetConstituentMinPt)continue;
+        PseudoJet constit(*_tower);
+        constit.set_user_info(new StJetUserInfo(_tower->index(), 0));
         jet_constituents.push_back(move(constit));
     } 
    
@@ -124,28 +126,36 @@ Int_t StMyJetMaker::Make(){
     
     if(_jets.size() < 1)return kStOK;
 
-    _JetEvent->SetIdNumbers(myEvent->RunNumber(), myEvent->EventNumber());
-    _JetEvent->SetRho(mBGE->rho());
+    _JetEvent->setNumberOfJets(_jets.size());
+
     if(!doMCJets){
-        _JetEvent->SetSigma(mBGE->sigma());
-        _JetEvent->SetNumberOfJets(_jets.size());
+        _JetEvent->setRho(mBGE->rho());
+        _JetEvent->setSigma(mBGE->sigma());
     }
-    _JetEvent->ClearJetArray();
+    _JetEvent->clearJetArray();
 
     if(_JetEvent->Jets->GetEntriesFast() > 0){
         cout<<"Jet array not cleared from previous event!"<<endl;
     }
 
+    int ijet = 0;
+
     for(PseudoJet& _jet : _jets){//BEGIN jet loop
-        TStarJet *jet = _JetEvent->AddJet(_jet);
+        TStarJet *jet = _JetEvent->addJet();
+        jet->setIndex(ijet++);
+        jet->setPtEtaPhiE(_jet.pt(), _jet.eta(), _jet.phi(), _jet.e());
+        jet->setArea(_jet.area(), _jet.area_4vector().px(), _jet.area_4vector().py(), _jet.area_4vector().pz());
         //cout<<_jet.pt()<<" "<<jet->Pt()<<endl;
         if(!doMCJets){ 
-            jet->SetRho(mBGE->rho(_jet));
-            jet->SetSigma(mBGE->sigma(_jet));
+            jet->setLocalRho(mBGE->rho(_jet));
+            jet->setLocalSigma(mBGE->sigma(_jet));
         }
         for(PseudoJet& _con : _jet.constituents()){
-            TStarJetConstituent *con = jet->AddConstituent(_con);
-            if(con)con->SetCharge(_con.user_info<StJetUserInfo>().getCharge());
+            if(_con.is_pure_ghost())continue;
+            TStarJetConstituent *con = jet->addConstituent();
+            con->setIndex(_con.user_info<StJetUserInfo>().getIndex());
+            con->setPtEtaPhiE(_con.pt(), _con.eta(), _con.phi(), _con.e());
+            con->setCharge(_con.user_info<StJetUserInfo>().getCharge());
         }   
     }
 

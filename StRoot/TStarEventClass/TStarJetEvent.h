@@ -5,39 +5,31 @@
 
 class TClonesArray;
 class TStarJet;
-class TStarEvent;
-
-namespace fastjet{
-    class PseudoJet;
-}
 
 class TStarJetEvent : public TObject{
 public:
     TStarJetEvent();
-    TStarJetEvent(int runid, int eventid);
-    TStarJetEvent(TStarEvent *e);
+    TStarJetEvent(float rho, float sigma, int njets);
+    TStarJetEvent(const TStarJetEvent& je);
     virtual ~TStarJetEvent();
 
-    int RunNumber(){return _RunID;}
-    int EventNumber(){return _EventID;}
-    float Rho(){return _Rho;}
-    float Sigma(){return _Sigma;}
-    int NumberOfJets(){return _NJets;}
-    TClonesArray* GetJets(){return Jets;}
+    float rho(){return _Rho;}
+    float sigma(){return _Sigma;}
+    int numberOfJets(){return _NJets;}
+    TClonesArray* getJets(){return Jets;}
 
-    void SetIdNumbers(int runid, int eventid){_RunID = runid; _EventID = eventid;}
-    TStarJet* AddJet(fastjet::PseudoJet& jet);
-    void SetRho(float rho){_Rho = rho;}
-    void SetSigma(float sig){_Sigma = sig;}
-    void SetNumberOfJets(int njets){_NJets = njets;}
+    TStarJet* addJet();
+    void addJet(const TStarJet& j);
 
-    void ClearJetArray();
+    void setRho(float rho){_Rho = rho;}
+    void setSigma(float sig){_Sigma = sig;}
+    void setNumberOfJets(int njets){_NJets = njets;}
 
-    int _RunID = 0;
-    int _EventID = 0;
+    void clearJetArray();
+
     float _Rho = 0;
     float _Sigma = 0;
-    float _NJets = 0;
+    int _NJets = 0;
     TClonesArray *Jets = nullptr;
 
     ClassDef(TStarJetEvent, 1);

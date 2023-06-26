@@ -1,8 +1,9 @@
 #define TStarTower_cxx
 
-#include <iostream>
 #include "TStarTower.h"
 #include "TVector3.h"
+
+#include <iostream>
 
 ClassImp(TStarTower);
 
@@ -12,43 +13,38 @@ TStarTower::TStarTower(){
 
 }
 
-TStarTower::TStarTower(unsigned int Id, unsigned int adc, float e){
+TStarTower::TStarTower(unsigned int Id, unsigned int adc, double E){
     _Index = Id;
     _ADC = adc;
-    _E = e;
+    _RawE = E;
 }
 
-TStarTower::TStarTower(unsigned int Id, unsigned int adc, float e, TVector3& towPos){
+TStarTower::TStarTower(unsigned int Id, unsigned int adc, double eraw, double E, TVector3& towPos, double m){
     _Index = Id;
     _ADC = adc;
-    _E = e;
-    _X = towPos.x();
-    _Y = towPos.y();
-    _Z = towPos.z();
+    _RawE = eraw;
+    setEtaPhiEM(towPos, E, m);
+}
+
+TStarTower::TStarTower(const TStarTower& t) : TStarVector(t){
+    _Index = t._Index;
+    _ADC = t._ADC;
+    _RawE = t._RawE;
+    _NMatchedTracks = t._NMatchedTracks;
+}
+
+TStarTower::TStarTower(unsigned int Id, unsigned int adc, double eraw, TStarVector& v) : TStarVector(v){
+    _Index = Id;
+    _ADC = adc;
+    _RawE = eraw;
 }
 
 TStarTower::~TStarTower(){
 
 }
 
-float TStarTower::Px(){
-    float r = sqrt(_X*_X + _Y*_Y + _Z*_Z);   
-    return P()*_X/r;
-}
-
-float TStarTower::Py(){
-    float r = sqrt(_X*_X + _Y*_Y + _Z*_Z);
-    return P()*_Y/r;
-}
-
-float TStarTower::Pz(){
-    float r = sqrt(_X*_X + _Y*_Y + _Z*_Z);
-    return P()*_Z/r;
-}
-
-float TStarTower::Phi(){
-   float phi = atan2(_Y, _X);
-   if(phi < 0.0) return phi+2.0*TMath::Pi();
-   else if(phi > 2.0*TMath::Pi()) return phi-2.0*TMath::Pi();
-   else return phi; 
+void TStarTower::print(){
+    cout<< "TStarTower :"<<endl;
+    cout << "Tower " << _Index << " ADC: " << _ADC << " RawE: " << _RawE << " E: " << _E << endl;
+    TStarVector::print();
 }
