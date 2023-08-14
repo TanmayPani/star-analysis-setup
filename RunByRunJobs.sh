@@ -7,8 +7,7 @@ echo "running aklog: "
 eval aklog
 echo "###############################################################################################"
 
-OUTDIR="/gpfs01/star/pwg/tpani/output/PicosToTree2"
-mkdir -p $OUTDIR
+OUTDIR="/gpfs01/star/pwg/$USER/output/"
 
 MYJOBNAME=$(date +%Y%m%d)
 NMAXPROCESSFILES="10"
@@ -17,7 +16,8 @@ SIMULATE="false"
 PROD="P18ih"
 LIB="SL20d"
 TRGSETUP="AuAu_200_production_mid_2014"
-RUNLIST="RUNLISTS/AuAu_200_production_mid_2014_GOOD.list"
+
+RUNLIST="RUNLISTS/${TRGSETUP}_GOOD_woNoHT.list"
 
 if [[ $SIMULATE == "true" ]]; then
 	NFILES="20"
@@ -27,10 +27,15 @@ else
 	NFILES="all"
 fi
 
-JOBUSERNAME="${TRGSETUP}_${PROD}_${LIB}_${MYJOBNAME}"
-mkdir -p $OUTDIR/$JOBUSERNAME
+$SYSTEM="${TRGSETUP}_${PROD}_${LIB}"
 
-mkdir -p JOBXML_FILES/${JOBUSERNAME}
+mkdir -p $OUTDIR
+mkdir -p $OUTDIR/$SYSTEM
+mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME
+
+mkdir -p JOBXML_FILES
+mkdir -p JOBXML_FILES/$SYSTEM
+mkdir -p JOBXML_FILES/$SYSTEM/$MYJOBNAME
 
 ITERATION=0
 
@@ -38,15 +43,13 @@ while read RUNNUMBER && [ $ITERATION -lt 1000 ]; do #Set to some really big numb
 
 	ITERATION=$((ITERATION+1))
 
-	#mkdir -p $OUTDIR/$JOBUSERNAME/$RUNNUMBER
-	mkdir -p $OUTDIR/$JOBUSERNAME/gen
-	mkdir -p $OUTDIR/$JOBUSERNAME/log
-	mkdir -p $OUTDIR/$JOBUSERNAME/out 
-	mkdir -p $OUTDIR/$JOBUSERNAME/out/EventTrees
-	mkdir -p $OUTDIR/$JOBUSERNAME/out/Histograms
-	#mkdir -p $OUTDIR/$JOBUSERNAME/out/JetTrees 
+	mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME/gen
+	mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME/log
+	mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME/Events
+	mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME/Histograms
+	mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME/MixedEvents
 
-	XMLSCRIPT="JOBXML_FILES/$JOBUSERNAME/SubmitJobs_$RUNNUMBER.xml"
+	XMLSCRIPT="JOBXML_FILES/$SYSTEM/$MYJOBNAME/SubmitJobs_$RUNNUMBER.xml"
 
 cat> "$XMLSCRIPT" <<EOL
 <?xml version="1.0" encoding="utf-8" ?> 
@@ -59,12 +62,13 @@ filetype=daq_reco_picoDst,sname2=st_physics,\
 runnumber=$RUNNUMBER,\
 storage!=hpss" nFiles="$NFILES" />
 
-	<stdout URL="file:$OUTDIR/$JOBUSERNAME/log/${RUNNUMBER}_\$JOBINDEX.log" />
-	<stderr URL="file:$OUTDIR/$JOBUSERNAME/log/${RUNNUMBER}_\$JOBINDEX.err" />
-	<output fromScratch="EventTree_${RUNNUMBER}_\$JOBINDEX.root" toURL="file:$OUTDIR/$JOBUSERNAME/out/EventTrees/" /> 
-	<output fromScratch="Histograms_${RUNNUMBER}_\$JOBINDEX.root" toURL="file:$OUTDIR/$JOBUSERNAME/out/Histograms/" /> 
+	<stdout URL="file:$OUTDIR/$SYSTEM/$MYJOBNAME/log/${RUNNUMBER}_\$JOBINDEX.log" />
+	<stderr URL="file:$OUTDIR/$SYSTEM/$MYJOBNAME/log/${RUNNUMBER}_\$JOBINDEX.err" />
+	<output fromScratch="${RUNNUMBER}_\$JOBINDEX.tree.root" toURL="file:$OUTDIR/$SYSTEM/$MYJOBNAME/Events/" /> 
+	<output fromScratch="${RUNNUMBER}_\$JOBINDEX.hist.root" toURL="file:$OUTDIR/$SYSTEM/$MYJOBNAME/Histograms/" /> 
+	<output fromScratch="${RUNNUMBER}_\$JOBINDEX.mixed.root" toURL="file:$OUTDIR/$SYSTEM/$MYJOBNAME/MixedEvents/" />
 	<Generator> 
-		<Location>$OUTDIR/$JOBUSERNAME/gen/</Location> 
+		<Location>$OUTDIR/$SYSTEM/$MYJOBNAME/gen/</Location> 
 	</Generator>
 
     <SandBox>

@@ -1,16 +1,15 @@
 #ifndef StMyJetMaker_h
 #define StMyJetMaker_h
 
-#include <memory>
-
 //STAR includes
 #include "StMaker.h"
 
-class StMyAnalysisMaker;
-class TClonesArray;
-class TStarEvent;
-class TStarJetEvent;
+class TStarJet;
+class TStarVector;
+
 class TFile;
+class TH1F;
+class TH2F;
 
 namespace fastjet{
     class PseudoJet;
@@ -20,79 +19,127 @@ namespace fastjet{
     class ClusterSequence;
     class ClusterSequenceArea;
     class JetMedianBackgroundEstimator;
+    namespace contrib{
+        class ConstituentSubtractor;
+    }
 }
 
 class StMyJetMaker : public StMaker{
     public:
-        StMyJetMaker(string name, string analysis, string outputfile); //default constructor
+        StMyJetMaker(string name, string outputfile, bool debug = false); //default constructor
         virtual ~StMyJetMaker();
 
         // class required functions
         virtual Int_t Init();
         virtual Int_t Make();
-        //virtual Int_t Clear();
+        virtual void  Clear(Option_t *option="");
         virtual Int_t Finish();
- 
-        void SetJetRadius(double r){R = r;}
 
-        void BookTree();
+        void addConstituentVector(const TStarVector& v);
 
-        //Boolean flags...
-        void SetDoMCJets(bool b){doMCJets = b;}
+        void setJetRadius(double r){R = r;}
+        void setJetAlgorithm(std::string alg);
+        void setRecombScheme(std::string scheme);
+        void setGhostMaxRap(double rap){ghostMaxRap = rap; doAreaCalc = true;}
+        void setAreaType(std::string type);
+        
+        void setBkgJetAlgorithm(std::string alg);
+        
+        unsigned int clusterJets();
+        int clusterAndStoreJets();
+        void writeHistograms();
+        void declareHistograms();
 
+        double getDeltaR(double eta1, double phi1, double eta2, double phi2);
+        double getDeltaR(fastjet::PseudoJet& pj1, fastjet::PseudoJet& pj2);
+
+        void setJetConstituentCut(double pt){jetConstituentMinPt = pt;}
         //Kinematic cuts for jets, can add more as needed...
-        void SetJetPtMin(double pt)     {JetPtMin = pt;}
-        void SetJetPtMax(double pt)     {JetPtMax = pt;}
-        void SetJetEtaMin(double eta)   {JetEtaMin = eta;}
-        void SetJetEtaMax(double eta)   {JetEtaMax = eta;}
-        void SetJetAbsEtaMax(double eta){JetAbsEtaMax = eta;}
+        void setJetPtMin(double pt)     {jetPtMin = pt;}
+        void setJetPtCSMin(double pt)   {jetPtCSMin = pt;}
+        void setJetPtMax(double pt)     {jetPtMax = pt;}
+        void setJetEtaMin(double eta)   {jetEtaMin = eta;}
+        void setJetEtaMax(double eta)   {jetEtaMax = eta;}
+        void setJetAbsEtaMax(double eta){jetAbsEtaMax = eta;}
+        void setDoFullJet(bool b){doFullJet = b;}
+        void setDoAreaCalculation(bool b){doAreaCalc = b;}
+        void setDoBackgroundEstimation(bool b){doBkgEst = b; 
+                                                if(b)doAreaCalc = b;}
+        void setDoConstituentSubtraction(bool b){doBkgSub = b;
+                                                if(b){doAreaCalc = b; doBkgEst = b;}}
+        void setUseSameVectorForBkg(bool b){useSameVectorForBkg = b;}
+
+        double getEventRho(){return eventRho;}
+        double getEventSigma(){return eventSigma;}
+
+        unsigned int numberOfJets();
+        TStarJet* getJet(unsigned int i);
 
     private:
-        double pi0mass = 0.13957;
-        StMyAnalysisMaker *anaMaker = nullptr;
-        TStarEvent *myEvent = nullptr;
-        std::string Analysis = "";
-        std::string OutputFileName = "";
+        class StPseudoJetUserInfo;
+        class StPseudoJetContainer;
+
+        StPseudoJetContainer* jetConstituents = nullptr;
+        StPseudoJetContainer* fullEvent = nullptr;
+
+        StPseudoJetContainer* jets = nullptr;
+
+        double eventRho = 0.0; //Rho of the event
+        double eventSigma = 0.0; //Sigma of the event
+
+        bool doDebug = false;
+
+        std::string histoFileName = "";
+
+        bool doFullJet = false;
+        bool doAreaCalc = false;
+        bool doBkgEst = false;
+        bool doBkgSub = false;
+
+        bool isGenLevel = false;
+
+        bool useSameVectorForBkg = true;
+
         float R = 0.4;
-        double MaxRap = 1.2;
-        bool doMCJets = false;
-        bool doBkgSubtraction = false;
+        double maxRap = 1.2;
+        double jetConstituentMinPt = 2.0;
+        double jetPtMin = 10;
+        double jetPtCSMin = 8;
+        double jetPtMax = 80;
+        double jetEtaMin = -0.6;
+        double jetEtaMax = 0.6;
+        double jetAbsEtaMax = 0.6;
 
-        double JetConstituentMinPt = 2.0;
-        double JetPtMin = 10;
-        double JetPtMax = 80;
-        double JetEtaMin = -0.6;
-        double JetEtaMax = 0.6;
-        double JetAbsEtaMax = 0.6;
+        int jetAlgorithm = 2;
+        int recombScheme = 6;
+        int areaType = 1;
+        double ghostMaxRap = 1.2;
 
-        fastjet::JetDefinition* jet_def = nullptr;
-        fastjet::JetDefinition* bkg_jet_def = nullptr;
+        int bkgJetAlgorithm = 0;
 
-        fastjet::GhostedAreaSpec* area_spec = nullptr;
-        fastjet::AreaDefinition* area_def = nullptr;
+        fastjet::JetDefinition* jetDef = nullptr;
+        fastjet::JetDefinition* bkgJetDef = nullptr;
 
-        fastjet::ClusterSequence* CS = nullptr;
-        fastjet::ClusterSequenceArea* CS_Area = nullptr;
+        fastjet::GhostedAreaSpec* areaSpec = nullptr;
+        fastjet::AreaDefinition* areaDef = nullptr;
 
-        fastjet::JetMedianBackgroundEstimator* mBGE = nullptr; 
+        fastjet::ClusterSequence* clustSeq = nullptr;
+        fastjet::ClusterSequenceArea* clustSeqArea = nullptr;
 
-        TFile *fout = nullptr;
-        TTree *tree = nullptr; 
-        TClonesArray *_Tracks = nullptr;
-        TClonesArray *_Towers = nullptr;  
+        fastjet::JetMedianBackgroundEstimator* bkgEstimator = nullptr; 
+        fastjet::contrib::ConstituentSubtractor* bkgSubtractor = nullptr;
 
-        class StJetUserInfo;
+        TFile *histOut = nullptr;
 
-    protected:
-        TStarJetEvent *_JetEvent = nullptr; //Final jets of the events are contained here
-        
+        double Wt = 1.0; //Weight of the event
+
+        std::map<std::string, TH1F*> histos1D;
+        std::map<std::string, TH2F*> histos2D;
+
+        static std::map<std::string, int> fJetAlgorithm;
+        static std::map<std::string, int> fJetRecombScheme;
+        static std::map<std::string, int> fJetAreaType;
+
     ClassDef(StMyJetMaker, 1)
 };
-//TODO : Methods for seamless transition between StPicoTrack and PseudoJet
-//Inspiration to be taken from Pythia8Plugins/FastJet3.h
-
-//class PseudoPicoTrack: public StPicoTrack, public PseudoJet::UserInfoBase{
-//    public:
-//    PseudoPicoTrack(const StPicoTrack trk) : StPicoTrack(trk) {}
-//};
 #endif

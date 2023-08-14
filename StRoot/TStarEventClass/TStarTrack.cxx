@@ -13,21 +13,8 @@ TStarTrack::TStarTrack(){
 
 }
 
-TStarTrack::TStarTrack(unsigned int _i, short _ch, double _pt, double _eta, double _phi, double _m) : 
-TStarVector(_pt, _eta, _phi, sqrt(p2() + _m * _m)){
-    _Index = _i;
-    _Charge = _ch;
-}
-
-TStarTrack::TStarTrack(unsigned int i, short ch, TVector3& trkMom, double m) : 
-TStarVector(trkMom, sqrt(trkMom.Mag2() + m * m)){
-    _Index = i;
-    _Charge = ch;
-}
-
 TStarTrack::TStarTrack(const TStarTrack& t) : TStarVector(t){
-    _Index = t._Index;
-    _Charge = t._Charge;
+    _GenMatchId = t._GenMatchId;
     _trackingEff = t._trackingEff;
     _MatchedTowerIndex = t._MatchedTowerIndex;
     _nSigmaPion = t._nSigmaPion;
@@ -40,11 +27,21 @@ TStarTrack::~TStarTrack(){
     
 }
 
-void TStarTrack::print(){
-    cout << "TStarTrack: " << endl;
-    cout <<"Index: " << _Index <<" Charge: " << _Charge << endl;
-    cout << "Tracking Efficiency: " << _trackingEff<< " Matched Tower Index: " << _MatchedTowerIndex << endl;
+void TStarTrack::setTrack(const TStarTrack& trk){
+    set(trk);
+    _GenMatchId = trk._GenMatchId;
+    _trackingEff = trk._trackingEff;
+    _MatchedTowerIndex = trk._MatchedTowerIndex;
+    _nSigmaPion = trk._nSigmaPion;
+    _nSigmaKaon = trk._nSigmaKaon;
+    _nSigmaProton = trk._nSigmaProton;
+    _nSigmaElectron = trk._nSigmaElectron;
+}
+
+void TStarTrack::Print(Option_t *) const {
+    cout << "_____TStarTrack: ____________" << endl;
+    TStarVector::Print();
+    cout << "Tracking Efficiency: " << _trackingEff <<" Matched Gen Track: "<< _GenMatchId << " Matched Tower Index: " << _MatchedTowerIndex << endl;
     cout << "nSigmaPion: " << _nSigmaPion << " nSigmaKaon: " << _nSigmaKaon <<" nSigmaProton: " << _nSigmaProton <<" nSigmaElectron: " << _nSigmaElectron << endl;
-    TStarVector::print();
 }
 

@@ -1,1 +1,0 @@
-../../../../StRoot/StMyAnalysisMaker/StEmcPosition2.cxx

@@ -1,7 +1,7 @@
 #!/bin/sh
 
-OUTDIR="/gpfs01/star/pwg/tpani/output/PicosToTree"
-MYJOBNAME="20230621"
+OUTDIR="/gpfs01/star/pwg/tpani/output/PicosToTree2"
+MYJOBNAME="20230626"
 PROD="P18ih"
 LIB="SL20d"
 TRGSETUP="AuAu_200_production_mid_2014"
@@ -10,12 +10,14 @@ RUNLIST="RUNLISTS/AuAu_200_production_mid_2014_GOOD.list"
 JOBUSERNAME="${TRGSETUP}_${PROD}_${LIB}_${MYJOBNAME}"
 
 TREETOMERGE="EventTree"
-#TREETOMERGE="JetTree"
 
 ITERATION=0
 while read RUNNUMBER && [ $ITERATION -lt 1000 ]; do 
     ITERATION=$((ITERATION+1))
-    #rm -rf $OUTDIR/$JOBUSERNAME/$RUNNUMBER/log
-    #rm -rf $OUTDIR/$JOBUSERNAME/$RUNNUMBER/gen
     hadd -n 50 $OUTDIR/$JOBUSERNAME/${TREETOMERGE}_$RUNNUMBER.root $OUTDIR/$JOBUSERNAME/out/${TREETOMERGE}s/${TREETOMERGE}_${RUNNUMBER}_*.root
+    rm -rf $OUTDIR/$JOBUSERNAME/out/${TREETOMERGE}s/${TREETOMERGE}_${RUNNUMBER}_*.root
 done < $RUNLIST
+
+rm -rf $OUTDIR/$JOBUSERNAME/out
+rm -rf $OUTDIR/$JOBUSERNAME/log
+rm -rf $OUTDIR/$JOBUSERNAME/gen

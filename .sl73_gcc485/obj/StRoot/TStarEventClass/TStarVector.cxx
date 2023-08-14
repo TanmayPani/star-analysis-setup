@@ -1,1 +1,0 @@
-../../../../StRoot/TStarEventClass/TStarVector.cxx

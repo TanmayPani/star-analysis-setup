@@ -1,0 +1,10 @@
+JOBXML_FILES
+.sl73_gcc485
+temp
+*.datasets
+*.xml
+*.root
+*.tree.root
+*.hist.root
+*.mixed.root
+temp_*

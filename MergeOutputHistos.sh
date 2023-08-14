@@ -1,7 +1,7 @@
 #!/bin/sh
 
-OUTDIR="/gpfs01/star/pwg/tpani/output/PicosToTree2"
-MYJOBNAME="20230626"
+OUTDIR="/gpfs01/star/pwg/tpani/output"
+MYJOBNAME="20230705"
 PROD="P18ih"
 LIB="SL20d"
 TRGSETUP="AuAu_200_production_mid_2014"
@@ -16,4 +16,4 @@ while read RUNNUMBER && [ $ITERATION -lt 1000 ]; do
     hadd -n 50 $OUTDIR/$JOBUSERNAME/out/${TREETOMERGE}_$RUNNUMBER.root $OUTDIR/$JOBUSERNAME/out/${TREETOMERGE}/${TREETOMERGE}_${RUNNUMBER}_*.root
 done < $RUNLIST
 
-hadd -n 50 Histograms.root $OUTDIR/$JOBUSERNAME/out/${TREETOMERGE}_*.root 
+hadd -f -n 50 Histograms.root $OUTDIR/$JOBUSERNAME/out/${TREETOMERGE}_*.root 

@@ -3,9 +3,11 @@
 #include "TStarEvent.h"
 
 #include "TVector3.h"
+#include "TLorentzVector.h"
 #include "TClonesArray.h"
 #include "TStarTrack.h"
 #include "TStarTower.h"
+#include "TStarGenTrack.h"
 
 #include <iostream>
 
@@ -13,53 +15,30 @@ ClassImp(TStarEvent);
 
 using namespace std;
 
+string TStarEvent::_RunFlag = "Run14";
+
+map<string, vector<unsigned int>> TStarEvent::_triggerMap = {
+    {"Run14_MBmon", {450011, 450021}}, 
+    {"Run14_VPDMB5", {450005, 450008, 450009, 450014, 450015, 450018, 450024, 450025, 450050, 450060}},
+    {"Run14_VPDMB30", {450010, 450020}}, {"Run14_HT1", {450201, 450211}}, {"Run14_HT2", {450202, 450212}},
+    {"Run14_HT3", {450203, 450213}}, {"Run14_HT", {450201, 450211, 450202, 450212, 450203, 450213}},
+    {"Run12_VPDMB", {370001, 370011}}, {"Run12_HT1", {370511, 370546}}, {"Run12_HT2", {370521, 370522, 370531, 370980}},
+    {"Run12_HT3", {380206, 380216}}
+};
+
 TStarEvent::TStarEvent(){
-    Tracks = new TClonesArray("TStarTrack", 1000);
-    Towers = new TClonesArray("TStarTower", 4800);
 
 }
 
 TStarEvent::TStarEvent(unsigned int runid, unsigned int eventid){
     _RunID = runid;
     _EventID = eventid;
-    Tracks = new TClonesArray("TStarTrack", 1000);
-    Towers = new TClonesArray("TStarTower", 4800);
 }
 
-TStarEvent::TStarEvent(const TStarEvent& ev){
-    _RunID         =  ev._RunID        ;
-    _EventID       =  ev._EventID      ;
-    _gRefMult      =  ev._gRefMult     ;
-    _RefMult       =  ev._RefMult      ;
-    _RefMultCorr   =  ev._RefMultCorr  ;
-    _Centrality    =  ev._Centrality   ;
-    _Weight        =  ev._Weight       ;
-    _Triggers      =  ev._Triggers     ;
-    _pVtx_Z        =  ev._pVtx_Z       ;
-    _pVtx_r        =  ev._pVtx_r       ;
-    _VPD_Vz        =  ev._VPD_Vz       ;
-    _ZDCxx         =  ev._ZDCxx        ;
-    _BBCxx         =  ev._BBCxx        ;
-    _MaxTrackPt    =  ev._MaxTrackPt   ;
-    _MaxTowerEt    =  ev._MaxTowerEt   ;
-
-    for(int i = 0; i < ev.Tracks->GetEntriesFast(); ++i){
-        TStarTrack* _trk = static_cast<TStarTrack*>(ev.Tracks->At(i));
-        new((*Tracks)[i]) TStarTrack(*_trk);
-    }
-
-    for(int i = 0; i < ev.Towers->GetEntriesFast(); ++i){
-        TStarTower* _tow = static_cast<TStarTower*>(ev.Towers->At(i));
-        new((*Towers)[i]) TStarTower(*_tow);
-    } 
-
-}
+TStarEvent::TStarEvent(const TStarEvent& ev){setEvent(ev);}
 
 TStarEvent::~TStarEvent(){
-    if(!TestBit(kIsOnHeap)){
-        delete Tracks;
-        delete Towers;
-    }
+
 }
 
 void TStarEvent::setEvent(const TStarEvent& ev){
@@ -69,25 +48,21 @@ void TStarEvent::setEvent(const TStarEvent& ev){
     _RefMult       =  ev._RefMult      ;
     _RefMultCorr   =  ev._RefMultCorr  ;
     _Centrality    =  ev._Centrality   ;
-    _Weight        =  ev._Weight       ;
+    _RefMultWeight =  ev._RefMultWeight;
+    _GenLevelWeight= ev._GenLevelWeight;
     _Triggers      =  ev._Triggers     ;
     _pVtx_Z        =  ev._pVtx_Z       ;
     _pVtx_r        =  ev._pVtx_r       ;
     _VPD_Vz        =  ev._VPD_Vz       ;
     _ZDCxx         =  ev._ZDCxx        ;
     _BBCxx         =  ev._BBCxx        ;
+    _Rho           =  ev._Rho          ;
+    _Sigma         =  ev._Sigma        ;
     _MaxTrackPt    =  ev._MaxTrackPt   ;
+    _MaxGenTrackPt =  ev._MaxGenTrackPt;
     _MaxTowerEt    =  ev._MaxTowerEt   ;
-    
-    for(int i = 0; i < ev.Tracks->GetEntriesFast(); ++i){
-        TStarTrack* _trk = static_cast<TStarTrack*>(ev.Tracks->At(i));
-        new((*Tracks)[i]) TStarTrack(*_trk);
-    }
-
-    for(int i = 0; i < ev.Towers->GetEntriesFast(); ++i){
-        TStarTower* _tow = static_cast<TStarTower*>(ev.Towers->At(i));
-        new((*Towers)[i]) TStarTower(*_tow);
-    } 
+    _MaxJetPt      =  ev._MaxJetPt     ;
+    _MaxGenJetPt   =  ev._MaxGenJetPt  ;
 }
 
 void TStarEvent::setPrimaryVertex(TVector3& pVtx){
@@ -95,64 +70,36 @@ void TStarEvent::setPrimaryVertex(TVector3& pVtx){
     _pVtx_r = pVtx.Perp();
 }
 
-TStarTrack* TStarEvent::addTrack(){
-    int index = Tracks->GetEntriesFast();
-    TStarTrack* _track = static_cast<TStarTrack*>(Tracks->ConstructedAt(index));
-    return _track;
+bool TStarEvent::isTriggered(unsigned int trig) const {
+    return (std::find(_Triggers.begin(), _Triggers.end(), trig) != _Triggers.end());
 }
 
-void TStarEvent::addTrack(const TStarTrack& track){
-    new((*Tracks)[Tracks->GetEntriesFast()]) TStarTrack(track);
+bool TStarEvent::isTriggered(std::string trig) const {
+    trig = _RunFlag + "_" + trig;
+    if(_triggerMap.find(trig) == _triggerMap.end()) return false;
+    bool res = false;
+    for(auto t : _triggerMap[trig]) res = res || isTriggered(t);
+    return res;
 }
 
-TStarTower* TStarEvent::addTower(){
-    int index = Towers->GetEntriesFast();
-    TStarTower* _tower = static_cast<TStarTower*>(Towers->ConstructedAt(index));
-    return _tower;
+void TStarEvent::setTriggers(std::vector<unsigned int>& triggers){
+   _Triggers.clear();
+   for(auto t : triggers) _Triggers.push_back(t);
 }
 
-void TStarEvent::addTower(const TStarTower& tower){
-    new((*Towers)[Towers->GetEntriesFast()]) TStarTower(tower);
-}
-
-void TStarEvent::clearTrackArray(){
-    Tracks->Clear();
-}
-
-void TStarEvent::clearTowerArray(){
-    Towers->Clear();
-}
-
-void TStarEvent::clearEvent(){
-    Tracks->Clear();
-    Towers->Clear();
-    _RunID         =  0;
-    _EventID       =  0;
-    _gRefMult      =  0;
-    _RefMult       =  0;
-    _RefMultCorr   =  0;
-    _Centrality    =  0;
-    _Weight        =  0;
-    _Triggers.clear();
-    _pVtx_Z        =  0;
-    _pVtx_r        =  0;
-    _VPD_Vz        =  0;
-    _ZDCxx         =  0;
-    _BBCxx         =  0;
-    _MaxTrackPt    =  0;
-    _MaxTowerEt    =  0;
-}
-
-void TStarEvent::print(){
+void TStarEvent::Print(Option_t* ) const{
     cout<<"********** Event Info from TStarEvent **********"<<endl;
     cout<<"RunID: "<<_RunID<<" EventID: "<<_EventID<<endl;
+    cout<<"Gen level weight: "<<_GenLevelWeight<<endl;
     cout<<"gRefMult: "<<_gRefMult<<" RefMult: "<<_RefMult<<" RefMultCorr: "<<_RefMultCorr<<endl;
-    cout<<"Centrality: "<<_Centrality<<" Weight: "<<_Weight<<endl;
+    cout<<"Centrality: "<<_Centrality<<" Refmult Weight: "<<_RefMultWeight<<endl;
     cout<<"pVtx_Z: "<<_pVtx_Z<<" pVtx_r: "<<_pVtx_r<<"VPD Vz: "<<_VPD_Vz<<endl;
     cout<<"ZDCxx: "<<_ZDCxx<<" BBCxx: "<<_BBCxx<<endl;
-    cout<<"MaxTrackPt: "<<_MaxTrackPt<<" MaxTowerEt: "<<_MaxTowerEt<<endl;
+    cout<<"MaxTrackPt: "<<_MaxTrackPt<<" MaxTowerEt: "<<_MaxTowerEt<<" MaxGenTrackPt: "<<_MaxGenTrackPt<<endl;
+    cout<<"MaxJetPt: "<<_MaxJetPt<<" MaxGenJetPt: "<<_MaxGenJetPt<<endl;
+    cout<<"Rho: "<<_Rho<<" Sigma: "<<_Sigma<<endl;
 
-    for(int i = 0; i < _Triggers.size(); ++i){
+    for(unsigned int i = 0; i < _Triggers.size(); ++i){
         cout<<"Trigger "<<i<<": "<<_Triggers[i]<<endl;
     }
     cout<<"MB_mon: "<<isMBmon()<<endl;
@@ -161,15 +108,6 @@ void TStarEvent::print(){
     cout<<"HT1: "<<isHT1()<<endl;
     cout<<"HT2: "<<isHT2()<<endl;
     cout<<"HT3: "<<isHT3()<<endl;
-    for(int i = 0; i < Tracks->GetEntriesFast(); ++i){
-        TStarTrack* _trk = static_cast<TStarTrack*>(Tracks->At(i));
-        _trk->print();
-    }
-
-    for(int i = 0; i < Towers->GetEntriesFast(); ++i){
-        TStarTower* _tow = static_cast<TStarTower*>(Towers->At(i));
-        _tow->print();
-    }
 
     cout<<"********** End of Event Info **********"<<endl;
 }
