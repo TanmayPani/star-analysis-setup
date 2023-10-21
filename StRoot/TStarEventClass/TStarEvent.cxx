@@ -15,8 +15,6 @@ ClassImp(TStarEvent);
 
 using namespace std;
 
-string TStarEvent::_RunFlag = "Run14";
-
 map<string, vector<unsigned int>> TStarEvent::_triggerMap = {
     {"Run14_MBmon", {450011, 450021}}, 
     {"Run14_VPDMB5", {450005, 450008, 450009, 450014, 450015, 450018, 450024, 450025, 450050, 450060}},
@@ -50,7 +48,7 @@ void TStarEvent::setEvent(const TStarEvent& ev){
     _Centrality    =  ev._Centrality   ;
     _RefMultWeight =  ev._RefMultWeight;
     _GenLevelWeight= ev._GenLevelWeight;
-    _Triggers      =  ev._Triggers     ;
+    setTriggers(ev._Triggers)          ;
     _pVtx_Z        =  ev._pVtx_Z       ;
     _pVtx_r        =  ev._pVtx_r       ;
     _VPD_Vz        =  ev._VPD_Vz       ;
@@ -75,16 +73,15 @@ bool TStarEvent::isTriggered(unsigned int trig) const {
 }
 
 bool TStarEvent::isTriggered(std::string trig) const {
-    trig = _RunFlag + "_" + trig;
+    trig = "Run"+to_string(runYear()) + "_" + trig;
     if(_triggerMap.find(trig) == _triggerMap.end()) return false;
     bool res = false;
     for(auto t : _triggerMap[trig]) res = res || isTriggered(t);
     return res;
 }
 
-void TStarEvent::setTriggers(std::vector<unsigned int>& triggers){
-   _Triggers.clear();
-   for(auto t : triggers) _Triggers.push_back(t);
+void TStarEvent::setTriggers(std::vector<unsigned int> triggers){
+   _Triggers.assign(triggers.begin(), triggers.end()); 
 }
 
 void TStarEvent::Print(Option_t* ) const{

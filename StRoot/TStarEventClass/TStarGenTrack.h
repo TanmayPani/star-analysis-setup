@@ -24,11 +24,11 @@ public:
 
     virtual void Print(Option_t *option = "") const;
 
-    int _GePid = -99;
-    int _PDGId = -99;
+    int _GePid = -99; 
+    int _PDGId = -99;//!
 
-    int _idVtx_Start = -99; //!
-    int _idVtx_End = -99; //!
+    int _idVtx_Start = -99; 
+    int _idVtx_End = -99; 
 
     ClassDef(TStarGenTrack, 1)
 };

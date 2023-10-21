@@ -7,17 +7,21 @@ echo "running aklog: "
 eval aklog
 echo "###############################################################################################"
 
-OUTDIR="/gpfs01/star/pwg/$USER/output/"
+OUTDIR="/gpfs01/star/pwg/$USER/output"
 
-MYJOBNAME=$(date +%Y%m%d)
+MYJOBNAME=$(date +%Y%m%d_%H%M%S)
 NMAXPROCESSFILES="10"
 SIMULATE="false"
 
-PROD="P18ih"
-LIB="SL20d"
-TRGSETUP="AuAu_200_production_mid_2014"
+#PROD="P18ih" #AuAu
+#LIB="SL20d" #AuAu
+#TRGSETUP="AuAu_200_production_mid_2014"
 
-RUNLIST="RUNLISTS/${TRGSETUP}_GOOD_woNoHT.list"
+PROD="P12id" #pp
+LIB="SL21d" #pp
+TRGSETUP="pp200_production_2012"
+
+RUNLIST="runLists/${TRGSETUP}_GOOD.list"
 
 if [[ $SIMULATE == "true" ]]; then
 	NFILES="20"
@@ -27,19 +31,19 @@ else
 	NFILES="all"
 fi
 
-$SYSTEM="${TRGSETUP}_${PROD}_${LIB}"
+SYSTEM="${TRGSETUP}_${PROD}_${LIB}"
 
 mkdir -p $OUTDIR
 mkdir -p $OUTDIR/$SYSTEM
 mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME
 
-mkdir -p JOBXML_FILES
-mkdir -p JOBXML_FILES/$SYSTEM
-mkdir -p JOBXML_FILES/$SYSTEM/$MYJOBNAME
+mkdir -p jobSubmitScripts
+mkdir -p jobSubmitScripts/$SYSTEM
+mkdir -p jobSubmitScripts/$SYSTEM/$MYJOBNAME
 
 ITERATION=0
 
-while read RUNNUMBER && [ $ITERATION -lt 1000 ]; do #Set to some really big number for a real submission
+while read RUNNUMBER && [ $ITERATION -lt 10000 ]; do #Set to some really big number for a real submission
 
 	ITERATION=$((ITERATION+1))
 
@@ -49,7 +53,7 @@ while read RUNNUMBER && [ $ITERATION -lt 1000 ]; do #Set to some really big numb
 	mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME/Histograms
 	mkdir -p $OUTDIR/$SYSTEM/$MYJOBNAME/MixedEvents
 
-	XMLSCRIPT="JOBXML_FILES/$SYSTEM/$MYJOBNAME/SubmitJobs_$RUNNUMBER.xml"
+	XMLSCRIPT="jobSubmitScripts/$SYSTEM/$MYJOBNAME/SubmitJobs_$RUNNUMBER.xml"
 
 cat> "$XMLSCRIPT" <<EOL
 <?xml version="1.0" encoding="utf-8" ?> 
@@ -71,8 +75,8 @@ storage!=hpss" nFiles="$NFILES" />
 		<Location>$OUTDIR/$SYSTEM/$MYJOBNAME/gen/</Location> 
 	</Generator>
 
-    <SandBox>
-        <Package>
+    <SandBox installer="ZIP">
+        <Package name="D${MYJOBNAME}">
             <File>file:./readPicoDstAnalysisMaker.C</File>
             <File>file:./StRoot/</File>
             <File>file:./.sl73_gcc485/</File>
@@ -86,7 +90,7 @@ storage!=hpss" nFiles="$NFILES" />
 		starver new
 		setenv FASTJET $FASTJET
 
-	    root -b -q -l readPicoDstAnalysisMaker.C\(\"\$FILELIST\",\"${RUNNUMBER}_\$JOBINDEX.root\",1000000000\)
+	    root -b -q -l readPicoDstAnalysisMaker.C\(\"\$FILELIST\",\"${RUNNUMBER}_\$JOBINDEX.root\",1000000000,false\)
 	   
 	    unlink fastjet
 	    unlink siscone   
@@ -97,6 +101,6 @@ EOL
 	star-submit $XMLSCRIPT
 done < $RUNLIST
 
-rm -r *.dataset *.session.xml
+rm -r *.dataset *.session.xml *.dataset.tmp
 
 #bash concheck.sh $myDate $BNLusername

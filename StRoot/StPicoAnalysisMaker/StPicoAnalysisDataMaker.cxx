@@ -47,7 +47,7 @@ StPicoAnalysisDataMaker::~StPicoAnalysisDataMaker(){
 }
 
 Int_t StPicoAnalysisDataMaker::Init(){
-    if(doDebug)cout<<"***********StPicoAnalysisDataMaker::Init()**************"<<endl;
+    cout<<"***********StPicoAnalysisDataMaker::Init()**************"<<endl;
 
     StPicoAnalysisBaseMaker::Init();
 

@@ -41,7 +41,7 @@ Int_t StPicoAnalysisGenMaker::Init(){
     cout<<"***********StPicoAnalysisGenMaker::Init()**************"<<endl;
     StPicoAnalysisBaseMaker::Init();
 
-    declareStatHistos();
+    //declareStatHistos();
 
     if(doJetAnalysis){
         cout<<"Getting gen-level jet maker..."<<endl;
@@ -74,7 +74,7 @@ Int_t StPicoAnalysisGenMaker::Make(){
     }
 
     if(!TStarArrays::hasEvent()){
-        cout<<"No event found in TStarArrays! SKIP!"<<endl;
+        //cout<<"No event found in TStarArrays! SKIP!"<<endl;
         return kStOk;
     }
 

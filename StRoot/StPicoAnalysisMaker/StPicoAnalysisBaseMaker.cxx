@@ -29,8 +29,8 @@ map<string, vector<unsigned int>> StPicoAnalysisBaseMaker::triggerMap = {
     {"Run14_VPDMB5", {450005, 450008, 450009, 450014, 450015, 450018, 450024, 450025, 450050, 450060}},
     {"Run14_VPDMB30", {450010, 450020}}, {"Run14_HT1", {450201, 450211}}, {"Run14_HT2", {450202, 450212}},
     {"Run14_HT3", {450203, 450213}}, {"Run14_HT", {450201, 450211, 450202, 450212, 450203, 450213}},
-    {"Run12_VPDMB", {370001, 370011}}, {"Run12_HT1", {370511, 370546}}, {"Run12_HT2", {370521, 370522, 370531, 370980}},
-    {"Run12_HT3", {380206, 380216}}
+    {"Run12_VPDMB", {370001, 370011}}, {"Run12_HT1", {370511, 370546}}, 
+    {"Run12_HT2", {370521, 370522, 370531, 370980}}, {"Run12_HT3", {380206, 380216}}
 };
 
 
@@ -67,7 +67,7 @@ void StPicoAnalysisBaseMaker::deleteHistograms(){
 } 
 
 Int_t StPicoAnalysisBaseMaker::Init(){
-    if(doDebug)cout<<"StPicoAnalysisBaseMaker::Init() - Starting"<<endl;
+    cout<<"StPicoAnalysisBaseMaker::Init() - Starting"<<endl;
     picoDstMaker = dynamic_cast<StPicoDstMaker*>(GetMaker("picoDst"));
     assert(((void)"No PicoDstMaker!", picoDstMaker));
     if(doDebug)cout<<"Got picoDstMaker"<<endl;
@@ -82,7 +82,7 @@ Int_t StPicoAnalysisBaseMaker::Init(){
         }
     }
 
-    TStarEvent::setRunFlag(runFlag);
+    //TStarEvent::setRunFlag(runFlag);
 
     string efficiencyFileName;
     switch(runFlag){
@@ -195,6 +195,13 @@ void StPicoAnalysisBaseMaker::addEventToTStarArrays(){
     tsEvent->setCorrectedRefmult(correctedRefMult);
     tsEvent->setRefMultWeight(Wt);
     tsEvent->setGenLevelWeight(Wt0);
+    tsEvent->setTriggers(eventTriggers);
+    if(!doppAnalysis){
+        if(tsEvent->isMB5()) fillHist1D("hCentralityMB05", centscaled, Wt);
+        if(tsEvent->isMB30())fillHist1D("hCentralityMB30", centscaled, Wt);
+        if(tsEvent->isHT2()) fillHist1D("hCentralityHT2" , centscaled, Wt);
+        if(tsEvent->isHT3()) fillHist1D("hCentralityHT3" , centscaled, Wt);
+    }
 } 
 
 int StPicoAnalysisBaseMaker::runStRefMultCorr(){
@@ -264,7 +271,6 @@ int StPicoAnalysisBaseMaker::setUpTriggers(){
         }
         cout<<"***************************"<<endl;
     }
-    tsEvent->setTriggers(eventTriggers);
     fillHist1D("hTriggerStats", 0); 
     bool hasTrigger = false;
     vector<string> triggerNames = {"MBmon", "VPDMB5", "VPDMB30", "HT1", "HT2", "HT3"};
@@ -286,13 +292,6 @@ int StPicoAnalysisBaseMaker::setUpTriggers(){
             if(doEventDebug || doTriggerDebug)cout<<"Not a HT event!"<<endl;
             return kStOK;
         }fillHist1D("hEventStats", 3);
-    }
-
-    if(!doppAnalysis){
-        if(tsEvent->isMB5()) fillHist1D("hCentralityMB05", centscaled, Wt);
-        if(tsEvent->isMB30())fillHist1D("hCentralityMB30", centscaled, Wt);
-        if(tsEvent->isHT2()) fillHist1D("hCentralityHT2" , centscaled, Wt);
-        if(tsEvent->isHT3()) fillHist1D("hCentralityHT3" , centscaled, Wt);
     }
 
     return -1;

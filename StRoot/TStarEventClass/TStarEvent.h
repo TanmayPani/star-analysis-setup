@@ -57,10 +57,10 @@ public:
     double maxJetPt() const {return _MaxJetPt;}
     double maxGenJetPt() const {return _MaxGenJetPt;}
 
-    static std::string& runFlag() {return _RunFlag;}
+    int runYear() const {return _RunID / 1000000 - 1;}
 
 //Modifiers
-    static void setRunFlag(unsigned int flag){_RunFlag = "Run" + std::to_string(flag);}
+    //static void setRunFlag(unsigned int flag){_RunFlag = "Run" + std::to_string(flag);}
     void setEvent(const TStarEvent& ev);
 
     void setIdNumbers(unsigned int runid, unsigned int eventid){_RunID = runid; _EventID = eventid;}
@@ -73,7 +73,7 @@ public:
     //void SetCentrality(int ref16){_Centrality = (ref16 >= 0 && ref16 < 16) ? std::ceil(2.5*(2*ref16 + 1)) : 0;}
     void setCentrality(double cent){_Centrality = cent;}
 
-    void setTriggers(std::vector<unsigned int>& trigs);
+    void setTriggers(std::vector<unsigned int> trigs);
 
     void setCorrectedRefmult(double rfcorr){_RefMultCorr = rfcorr;}
     void setRefMultWeight(double wt){_RefMultWeight = wt;}
@@ -92,15 +92,15 @@ public:
 
     virtual void Print(Option_t *option = "") const;
 
-    unsigned int   _RunID         = 0;//!
-    unsigned int   _EventID       = 0;//!
-    unsigned int   _gRefMult      = 0;//!
-    unsigned int   _RefMult       = 0;//!
-    double          _RefMultCorr   = 0;
-    double          _Centrality    = 0;
-    double          _RefMultWeight = 1.0;
+    unsigned int   _RunID         = 0;
+    unsigned int   _EventID       = 0;
+    unsigned int   _gRefMult      = 0;
+    unsigned int   _RefMult       = 0;
+    double          _RefMultCorr   = 0;//!
+    double          _Centrality    = 0;//!
+    double          _RefMultWeight = 1.0;//!
     double          _GenLevelWeight = 1.0;//!
-    std::vector<unsigned int> _Triggers;
+    std::vector<unsigned int> _Triggers = {};
     double          _pVtx_Z        = -999;
     double          _pVtx_r        = -99; //!
     double          _VPD_Vz        = -999; //!
@@ -109,15 +109,15 @@ public:
     double          _Rho           = 0; //!
     double          _Sigma         = 0; //!
     double          _MaxTrackPt    = 0;
-    double          _MaxGenTrackPt = 0;//!
+    double          _MaxGenTrackPt = 0;
     double          _MaxTowerEt    = 0;
     double          _MaxJetPt      = 0;
-    double          _MaxGenJetPt   = 0;//!
+    double          _MaxGenJetPt   = 0;
 
 private:
-    static std::string _RunFlag; 
+    //static std::string _RunFlag; 
     static std::map<std::string, std::vector<unsigned int>> _triggerMap; //!
 
-    ClassDef(TStarEvent, 3)
+    ClassDef(TStarEvent, 4)
 };
 #endif

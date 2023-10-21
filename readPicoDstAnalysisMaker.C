@@ -31,12 +31,17 @@ void LoadLibs(){
   gSystem->ListLibraries();
 } 
 
-void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/Run14_P18ih_SL20d_mid_testFiles.list", string outputFile="test.root", int nEvents = 100000000){
+//void readPicoDstAnalysisMaker(string inputFile="fileLists/testing/pp200GeV_filelist.list", 
+void readPicoDstAnalysisMaker(string inputFile="fileLists/testing/pp200GeV_filelist.list", 
+                              string outputFile="test.root", 
+                              int nEvents = 1000000000,
+                              bool doEmbedding = 0)
+{
 //void readPicoDstAnalysisMaker(string inputtype="Pythia6Embedding", string trgsetup="AuAu_200_production_2014", string production="P18ih", string library="SL18h", string suffix="20192901_MuToPico20230718", int pthmin = 30, int pthmax = 40, int jobid = 0, string outputFile="test_4.root", int nEvents = 100000000){
       //string inputFile = Form("fileLists/%s_%s_%s_%s_%s/pt%d_%d_%d.list", inputtype.c_str(), trgsetup.c_str(), production.c_str(), library.c_str(), suffix.c_str(), pthmin, pthmax, jobid);
       // Load necessary libraries and macros
       // check if input file is a picoDst file
-      if(inputFile.find(".picoDst.root") != std::string::npos){
+      if((inputFile.find(".picoDst.root") != std::string::npos) && (inputFile.find("*.picoDst.root") == std::string::npos)){
         cout << "Input file is a picoDst file" << endl;
         outputFile = inputFile.substr(inputFile.find_last_of("/")+1);
         outputFile.replace(outputFile.find(".picoDst.root"), 13, ".root");
@@ -58,9 +63,9 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/Run14_P18ih_SL
       StChain* makerChain = new StChain();
 
       //boolean flags
-      bool doppAnalysis = false;
-      bool doEmbedding = false;
-      bool doMixedEvents = true;
+      bool doppAnalysis = true;
+      //bool doEmbedding = true;
+      bool doMixedEvents = false;
       bool doJetAnalysis = true;
 
       bool useEmcPidTraits = false;
@@ -97,17 +102,14 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/Run14_P18ih_SL
       TTree *outTree = new TTree("Events", "Tree with event Info", 99);
       //outTree->SetDirectory(gDirectory);
 
-      string mixedEventOutputFile = outputFile;
-      mixedEventOutputFile.insert(mixedEventOutputFile.find(".root"), ".mixed");
-
-      TFile *mixedEventFile = new TFile(mixedEventOutputFile.c_str(), "RECREATE");
-      TTree *mixedEventTree = new TTree("MixedEvents", "Tree with mixed events", 99);
+      TFile *mixedEventFile = NULL;
+      TTree *mixedEventTree = NULL;
+      TStarMixedEventArray *tsMixedEventArray = NULL;
 
       float R = 0.4;
       double jetConstituentPtCut = 2.0;
 
       TStarArrays *tsArrays = new TStarArrays();
-      TStarMixedEventArray *tsMixedEventArray = new TStarMixedEventArray();
 
       //initialize main analysis arrays...
       TStarArrays::addArray("event");
@@ -118,10 +120,10 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/Run14_P18ih_SL
 
       cout<<"adding maker number "<<nAnalysisMakers+1<<" to chain"<<endl;
       StPicoAnalysisDataMaker *dataMaker = new StPicoAnalysisDataMaker(nAnalysisMakers++, "dataMaker", histoOutputFile);
-      dataMaker->setRunFlag(14);
+      dataMaker->setRunFlag(12);
       dataMaker->setDoppAnalysis(doppAnalysis);
       dataMaker->setDoRunbyRun(true);
-      dataMaker->setSelectHTEventsOnly(true);
+      dataMaker->setSelectHTEventsOnly(false);
       dataMaker->setDoEmbedding(doEmbedding);
       dataMaker->setDoMixedEventAnalysis(doMixedEvents);
 
@@ -206,6 +208,11 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/Run14_P18ih_SL
 
       TStarArrays::setBranch(outTree);
       if(doMixedEvents){
+        string mixedEventOutputFile = outputFile;
+        mixedEventOutputFile.insert(mixedEventOutputFile.find(".root"), ".mixed");
+        mixedEventFile = new TFile(mixedEventOutputFile.c_str(), "RECREATE");
+        mixedEventTree = new TTree("MixedEvents", "Tree with mixed events", 99);
+        tsMixedEventArray = new TStarMixedEventArray();
         unsigned int nRefMultMixBins = 39;
         unsigned int nTrkPtMixBins = 6;
         unsigned int nZVtxMixBins = 15; 
@@ -220,11 +227,11 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/Run14_P18ih_SL
       cout << " Total entries = " << total << endl;
       if(nEvents > total) nEvents = total;
 
-      cout<<"Run Flag = "<<TStarEvent::runFlag()<<endl;
+      //cout<<"Run Flag = "<<TStarEvent::runFlag()<<endl;
 
       for (Int_t i = 0; i < nEvents; i++){
-        if(i%1000 == 0) cout << "Working on eventNumber " << i << endl;
-        //cout << "Working on eventNumber " << i << endl;
+        if(i%1000 == 0) 
+          cout << "Working on eventNumber " << i << endl;
 
         TStarArrays::clearArrays();
        // cout<<TStarArrays::hasEvent()<<" "<<TStarArrays::numberOfTracks()<<endl;
@@ -250,6 +257,7 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/Run14_P18ih_SL
   if(doMixedEvents) {
     mixedEventTree->Fill();
     mixedEventFile->WriteObject(mixedEventTree, "MixedEvents");
+    if(mixedEventFile->IsOpen()) mixedEventFile->Close();
   }
 	cout << "****************************************** " << endl;
 	cout << "Work done... now its time to close up shop!"<< endl;
@@ -265,7 +273,5 @@ void readPicoDstAnalysisMaker(string inputFile="TESTING_FILELISTS/Run14_P18ih_SL
   // close output file if open
   if(outFile->IsOpen()) outFile->Close();
   if(histOut->IsOpen()) histOut->Close();
-  if(mixedEventFile->IsOpen()) mixedEventFile->Close();
-
   //StMemStat::PrintMem("load StChain");
 }

@@ -1,6 +1,11 @@
-JOBXML_FILES
+jobSubmitScripts
+fileLists
+fastjet
+siscone
 .sl73_gcc485
 temp
+*.package
+*.zip
 *.datasets
 *.xml
 *.root
