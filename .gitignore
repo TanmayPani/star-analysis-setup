@@ -1,0 +1,7 @@
+*.package
+*.zip
+*.c
+jobSubmitScripts
+testOutputs/*.root
+fastjet
+siscone
